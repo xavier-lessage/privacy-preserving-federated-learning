@@ -1,3 +1,6 @@
+from threading import Thread
+
+from MiningThreads import *
 from Block import *
 
 
@@ -16,28 +19,17 @@ class Node:
         """
         Add a block to the Chain with the actual mempool
         """
-        block = Block(len(self.chain), self.get_last_block().compute_hash(), self.mempool)
-        self.mine(block)
-        self.mempool.clear()
-        self.chain.append(block)
-        print("Block added: " + block.compute_hash())
+        block = Block(len(self.chain), self.get_last_block().compute_hash(), self.mempool.copy())
+        self.mine()
 
-    def mine(self, block):
+    def mine(self):
         """
         Works to create a block that has the right level of difficulty
         :return:
         """
-        # sets the difficulty
-        difficulty = 3
-        attempts_number = 0
-
-        while block.compute_hash()[:difficulty] != "0" * difficulty:
-            # print("Retry"+block.compute_hash())
-            block.nonce += 1
-            attempts_number += 1
-
-        # print("Good job"+block.compute_hash())
-        print("Tried " + str(attempts_number))
+        mining_thread = Thread(target=mine_thread, args=(self, ))
+        mining_thread.start()
+        mining_thread.join()
 
     def verify_chain(self):
         """
@@ -73,3 +65,14 @@ class Node:
 
     def get_last_block(self):
         return self.chain[-1]
+
+    def add_to_mempool(self, data):
+        self.mempool.append(data)
+
+    def print_chain(self):
+        print("Node: ", self.id)
+        for block in self.chain:
+            print("Block index: ", block.index)
+            print("Block hash: ", block.compute_hash())
+            print("Block parent", block.previous_hash)
+            print("Block data", block.data)

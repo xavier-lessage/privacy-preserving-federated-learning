@@ -2,9 +2,9 @@ from hashlib import sha256
 
 
 class Block:
-    def __init__(self, index, previous_hash, data):
+    def __init__(self, index, previous_hash, data, nonce=0):
         self.index = index
-        self.nonce = 0
+        self.nonce = nonce
         self.previous_hash = previous_hash
         self.data = data
 
@@ -26,3 +26,22 @@ class Block:
         TODO in the node class
         :return:
         """
+
+    def print_header(self):
+        print("Index: ", self.index)
+        print("Nonce: ", self.nonce)
+        print("Previous: ", self.previous_hash)
+        print("data: ", self.data)
+
+    def increase_nonce(self):
+        self.nonce+=1
+
+    def update_data(self, data):
+        self.data=data
+
+    def __repr__(self):
+        """
+        Translate the block object in a string object
+        :return: The constructor as a string to eval()
+        """
+        return f'Block("{self.index}", "{self.previous_hash}", "{self.data}", "{self.nonce}")'

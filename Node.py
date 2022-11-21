@@ -5,7 +5,9 @@ from Block import *
 
 
 class Node:
-
+    """
+    Class representing a 'user' that has his id, his blockchain and his mempool
+    """
     def __init__(self, id):
         self.id = id
         self.chain = []
@@ -27,7 +29,7 @@ class Node:
         Works to create a block that has the right level of difficulty
         :return:
         """
-        mining_thread = Thread(target=mine_thread, args=(self, ))
+        mining_thread = Thread(target=mine_thread, args=[self, 3])
         mining_thread.start()
         mining_thread.join()
 
@@ -64,15 +66,21 @@ class Node:
             return False
 
     def get_last_block(self):
+        """
+        :return: the last block of the chain
+        """
         return self.chain[-1]
 
     def add_to_mempool(self, data):
+        """
+        Adds an element to the mempool list
+        """
         self.mempool.append(data)
 
     def print_chain(self):
+        """
+        Prints the chain information, block by block
+        """
         print("Node: ", self.id)
         for block in self.chain:
-            print("Block index: ", block.index)
-            print("Block hash: ", block.compute_hash())
-            print("Block parent", block.previous_hash)
-            print("Block data", block.data)
+            block.print_header()

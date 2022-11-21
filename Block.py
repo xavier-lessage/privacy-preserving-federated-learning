@@ -28,20 +28,28 @@ class Block:
         """
 
     def print_header(self):
+        """
+        Prints the block information
+        """
         print("Index: ", self.index)
         print("Nonce: ", self.nonce)
         print("Previous: ", self.previous_hash)
         print("data: ", self.data)
 
     def increase_nonce(self):
-        self.nonce+=1
+        self.nonce += 1
 
     def update_data(self, data):
-        self.data=data
+        """
+        Updates the data of a block
+        :param data:
+        :return:
+        """
+        self.data = data.copy()
 
     def __repr__(self):
         """
         Translate the block object in a string object
-        :return: The constructor as a string to eval()
+        :return: The constructor as a string
         """
         return f'Block("{self.index}", "{self.previous_hash}", "{self.data}", "{self.nonce}")'

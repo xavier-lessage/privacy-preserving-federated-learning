@@ -1,14 +1,16 @@
-from threading import Thread
-
 from MiningThreads import *
 from Block import *
+from Connections import *
+
+# from PROJH402.Connections import NodeThread
 
 
 class Node:
     """
     Class representing a 'user' that has his id, his blockchain and his mempool
     """
-    def __init__(self, id):
+
+    def __init__(self, id, host, port):
         self.id = id
         self.chain = []
         self.mempool = []
@@ -17,42 +19,48 @@ class Node:
         first_block = Block(0, 0000000, [])
         self.chain.append(first_block)
 
-    def add_block(self):
-        """
-        Add a block to the Chain with the actual mempool
-        """
-        block = Block(len(self.chain), self.get_last_block().compute_hash(), self.mempool.copy())
-        self.mine()
+        self.tcp_thread = NodeThread(self, host, port, id)
 
-    def mine(self):
+        self.mining_thread = MiningThread(self, 5)
+
+    def start_mining(self):
         """
-        Works to create a block that has the right level of difficulty
+        Starts the mining thread
+        """
+        print("Starting the mining \n")
+        self.mining_thread.start()
+
+    def stop_mining(self):
+        self.mining_thread.stop()
+
+    def start_tcp(self):
+        """
+        starts the NodeThread that handles the TCP connection with other nodes
         :return:
         """
-        mining_thread = Thread(target=mine_thread, args=[self, 3])
-        mining_thread.start()
-        mining_thread.join()
+        self.tcp_thread.start()
 
-    def verify_chain(self):
+    def stop_tcp(self):
+        self.tcp_thread.stop()
+
+    def verify_chain(self, chain):
         """
         Checks every block of the chain to see if the previous_hash matches the hash of the previous block
         """
-        last_block = self.chain[0]
+        last_block = chain[0]
         i = 1
-        while i < len(self.chain):
-            if self.chain[i].previous_hash == last_block.compute_hash():
-                last_block = self.chain[i]
+        while i < len(chain):
+            if chain[i].previous_hash == last_block.compute_hash():
+                last_block = chain[i]
                 i += 1
-                print("Correct block")
             else:
                 print("Error in the blockchain")
                 return False
-
+        print("The blockchain is correct")
         return True
 
     def compare_chains(self, chain):
         """
-        TODO: compare otherwise the blocks
         Compares two chains to determine the one to keep
         :param chain: Chain to compare with the actual chain of the node
         :return: True if the input chain is "better" than the actual chain
@@ -84,3 +92,5 @@ class Node:
         print("Node: ", self.id)
         for block in self.chain:
             block.print_header()
+
+

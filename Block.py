@@ -32,6 +32,7 @@ class Block:
         Prints the block information
         """
         print("Index: ", self.index)
+        print("Hash", self.compute_hash())
         print("Nonce: ", self.nonce)
         print("Previous: ", self.previous_hash)
         print("data: ", self.data)
@@ -42,8 +43,6 @@ class Block:
     def update_data(self, data):
         """
         Updates the data of a block
-        :param data:
-        :return:
         """
         self.data = data.copy()
 

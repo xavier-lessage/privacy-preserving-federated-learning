@@ -1,3 +1,5 @@
 # PROJH402
 
-The repr() function in the block class is not compatible with the transaction class
+TODO: 
+-Change the way of comparing blockchains
+-

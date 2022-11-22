@@ -1,15 +1,14 @@
-import threading
+from Node import *
 import socket
-import ipaddress
-import time
 
 PORT = 65432
 
 
 class ConnectionThread(threading.Thread):
-    def __init__(self, sock, id, host, port):
+    def __init__(self, node, sock, id, host, port):
         super().__init__()
 
+        self.node = node
         self.id = id
         self.host = host
         self.sock = sock
@@ -28,19 +27,20 @@ class ConnectionThread(threading.Thread):
             data = self.sock.recv(4096)
             msg = data.decode()
             print(msg)
-            print(self.id)
-
-
-def create_connection(sock, id, host, port):
-    return ConnectionThread(sock, id, host, port)
+            self.node.add_to_mempool(msg)
 
 
 class NodeThread(threading.Thread):
-    def __init__(self, host="", port=652, id=0):
+    """
+    Thread used by the node to communicate to other nodes
+    """
+
+    def __init__(self, node, host="", port=652, id=0):
         super().__init__()
         self.terminate_flag = threading.Event()
 
         self.id = id
+        self.node = node
 
         self.host = host
         self.ip = host
@@ -48,9 +48,6 @@ class NodeThread(threading.Thread):
 
         self.nodes_connected = []
         self.msgs = {}
-        self.peers = []
-
-        hostname = socket.gethostname()
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -63,7 +60,7 @@ class NodeThread(threading.Thread):
         for i in self.nodes_connected:
             i.send(message)
 
-    def connect_to(self, host, port=PORT):
+    def connect_to(self, host, port):
         # for node in self.nodes_connected:
         #         # if node.host == host:
         #     #     print("[connect_to]: Already connected with this node.")
@@ -76,7 +73,7 @@ class NodeThread(threading.Thread):
         connected_node_id = sock.recv(1024).decode("utf-8")
         print("connected_node_id: ", connected_node_id)
 
-        thread_client = create_connection(
+        thread_client = self.create_connection(
             sock, connected_node_id, host, port
         )
         self.nodes_connected.append(thread_client)
@@ -85,13 +82,13 @@ class NodeThread(threading.Thread):
         self.terminate_flag.set()
 
     def run(self):
-        while True:
+        while not self.terminate_flag.is_set():
             connection, client_address = self.sock.accept()
             connected_node_id = connection.recv(2048).decode("utf-8")
             connection.send(str(self.id).encode("utf-8"))
 
             if self.id != connected_node_id:
-                thread_client = create_connection(
+                thread_client = self.create_connection(
                     connection,
                     connected_node_id,
                     client_address[0],
@@ -102,9 +99,13 @@ class NodeThread(threading.Thread):
                 self.nodes_connected.append(thread_client)
             else:
                 connection.close()
+            sleep(0.1)
 
         for t in self.nodes_connected:
             t.stop()
 
         self.sock.close()
         print("Node " + str(self.id) + " stopped")
+
+    def create_connection(self, sock, id, host, port):
+        return ConnectionThread(self.node, sock, id, host, port)

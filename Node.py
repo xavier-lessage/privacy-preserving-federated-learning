@@ -56,7 +56,7 @@ class Node:
             else:
                 print("Error in the blockchain")
                 return False
-        print("The blockchain is correct")
+        # print("The blockchain is correct")
         return True
 
     def compare_chains(self, chain):
@@ -66,7 +66,7 @@ class Node:
         :return: True if the input chain is "better" than the actual chain
                 False if the chain is not valid or if the actual chain is better than the input one
         """
-        if not chain.verify():
+        if not self.verify_chain(chain):
             return False
         if len(chain) > len(self.chain):
             return True

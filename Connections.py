@@ -23,11 +23,17 @@ class ConnectionThread(threading.Thread):
         self.terminate_flag.set()
 
     def run(self):
+        self.sock.settimeout(10.0)
+
         while not self.terminate_flag.is_set():
             data = self.sock.recv(4096)
             msg = data.decode()
             print(msg)
             self.node.add_to_mempool(msg)
+            sleep(0.01)
+        self.sock.settimeout(None)
+        self.sock.close()
+        sleep(1)
 
 
 class NodeThread(threading.Thread):
@@ -53,7 +59,7 @@ class NodeThread(threading.Thread):
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         print("Initialisation of the Node on port: " + str(self.port))
         self.sock.bind((self.host, self.port))
-        # self.sock.settimeout(10.0)
+        self.sock.settimeout(10.0)
         self.sock.listen(1)
 
     def network_send(self, message):
@@ -83,23 +89,31 @@ class NodeThread(threading.Thread):
 
     def run(self):
         while not self.terminate_flag.is_set():
-            connection, client_address = self.sock.accept()
-            connected_node_id = connection.recv(2048).decode("utf-8")
-            connection.send(str(self.id).encode("utf-8"))
+            try:
+                connection, client_address = self.sock.accept()
+                connected_node_id = connection.recv(2048).decode("utf-8")
+                connection.send(str(self.id).encode("utf-8"))
 
-            if self.id != connected_node_id:
-                thread_client = self.create_connection(
-                    connection,
-                    connected_node_id,
-                    client_address[0],
-                    client_address[1],
-                )
-                thread_client.start()
+                if self.id != connected_node_id:
+                    thread_client = self.create_connection(
+                        connection,
+                        connected_node_id,
+                        client_address[0],
+                        client_address[1],
+                    )
+                    thread_client.start()
 
-                self.nodes_connected.append(thread_client)
-            else:
-                connection.close()
-            sleep(0.1)
+                    self.nodes_connected.append(thread_client)
+                else:
+                    connection.close()
+
+            except socket.timeout:
+                pass
+
+            except Exception as e:
+                raise e
+
+            sleep(0.01)
 
         for t in self.nodes_connected:
             t.stop()

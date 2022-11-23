@@ -11,6 +11,7 @@ def mining_test():
     node0.stop_mining()
     node0.verify_chain(node0.chain)
 
+
 def tcp_test():
     node0.start_tcp()
     node1.start_tcp()
@@ -25,6 +26,19 @@ def tcp_test():
     # node0.stop_tcp()
 
 
+def comp_test():
+    node0.start_mining()
+    node1.start_mining()
+    sleep(1)
+    thread = AddMempoolThread(node0, "Hello")
+    thread.start()
+    thread.join()
+    sleep(10)
+    node0.stop_mining()
+    node1.stop_mining()
+
+
 if __name__ == '__main__':
     tcp_test()
     # mining_test()
+    # comp_test()

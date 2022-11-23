@@ -26,10 +26,18 @@ class ConnectionThread(threading.Thread):
         self.sock.settimeout(10.0)
 
         while not self.terminate_flag.is_set():
-            data = self.sock.recv(4096)
-            msg = data.decode()
-            print(msg)
-            self.node.add_to_mempool(msg)
+            try:
+                data = self.sock.recv(4096)
+                msg = data.decode()
+                # print(msg)
+                self.node.add_to_mempool(msg)
+
+            except socket.timeout:
+                pass
+
+            except Exception as e:
+                self.terminate_flag.set()
+
             sleep(0.01)
         self.sock.settimeout(None)
         self.sock.close()
@@ -67,10 +75,10 @@ class NodeThread(threading.Thread):
             i.send(message)
 
     def connect_to(self, host, port):
-        # for node in self.nodes_connected:
-        #         # if node.host == host:
-        #     #     print("[connect_to]: Already connected with this node.")
-        #     #     return True
+        for node in self.nodes_connected:
+            if node.port == port:
+                print("[connect_to]: Already connected with this node.", port)
+                return True
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect((host, port))

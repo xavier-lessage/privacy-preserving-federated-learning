@@ -29,7 +29,6 @@ class ConnectionThread(threading.Thread):
             try:
                 data = self.sock.recv(4096)
                 msg = data.decode()
-                # print(msg)
                 self.node.add_to_mempool(msg)
 
             except socket.timeout:
@@ -73,6 +72,10 @@ class NodeThread(threading.Thread):
     def network_send(self, message):
         for i in self.nodes_connected:
             i.send(message)
+
+    def broadcast_mempool(self):
+        for i in self.nodes_connected:
+            i.send("[" + ', '.join(self.node.mempool) + "]" + "#M#")
 
     def connect_to(self, host, port):
         for node in self.nodes_connected:

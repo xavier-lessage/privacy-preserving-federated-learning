@@ -2,6 +2,7 @@ from MiningThreads import *
 from Block import *
 from Connections import *
 
+
 # from PROJH402.Connections import NodeThread
 
 
@@ -10,18 +11,19 @@ class Node:
     Class representing a 'user' that has his id, his blockchain and his mempool
     """
 
-    def __init__(self, id, host, port):
+    def __init__(self, id, host, port, difficulty):
         self.id = id
         self.chain = []
         self.mempool = []
+        self.difficulty = difficulty
 
         # Initialize the first Block
-        first_block = Block(0, 0000000, [])
+        first_block = Block(0, 0000000, [], self.id, time(), self.difficulty, 0)
         self.chain.append(first_block)
 
         self.tcp_thread = NodeThread(self, host, port, id)
 
-        self.mining_thread = MiningThread(self, 5)
+        self.mining_thread = MiningThread(self)
 
     def start_mining(self):
         """
@@ -46,17 +48,17 @@ class Node:
     def verify_chain(self, chain):
         """
         Checks every block of the chain to see if the previous_hash matches the hash of the previous block
+        TODO: check the block height
         """
         last_block = chain[0]
         i = 1
         while i < len(chain):
-            if chain[i].previous_hash == last_block.compute_hash():
+            if chain[i].parent_hash == last_block.compute_hash() and chain[i].verify:
                 last_block = chain[i]
                 i += 1
             else:
                 print("Error in the blockchain")
                 return False
-        # print("The blockchain is correct")
         return True
 
     def compare_chains(self, chain):
@@ -68,16 +70,18 @@ class Node:
         """
         if not self.verify_chain(chain):
             return False
-        if len(chain) > len(self.chain):
+        if chain[-1].total_difficulty > self.get_block('last').total_difficulty:
             return True
         else:
             return False
 
-    def get_last_block(self):
-        """
-        :return: the last block of the chain
-        """
-        return self.chain[-1]
+    def get_block(self, height):
+        if height == 'last':
+            return self.chain[-1]
+        elif height == 'first':
+            return self.chain[0]
+        else:
+            return self.chain[height]
 
     def add_to_mempool(self, data):
         """
@@ -101,5 +105,3 @@ class Node:
         for block in self.chain:
             print(block.__repr__())
         print("\n")
-
-

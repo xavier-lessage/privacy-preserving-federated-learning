@@ -1,11 +1,12 @@
-from Node import *
+import threading
+
 import socket
+from time import sleep
 
-from src import constants
-from src.ConnectionThread import ConnectionThread
-from src.constants import ENCODING
-
-PORT = 65432
+from PROJH402.src import constants
+from PROJH402.src.ConnectionThread import ConnectionThread
+from PROJH402.src.DataHandler import DataHandler
+from PROJH402.src.constants import ENCODING
 
 
 class NodeThread(threading.Thread):
@@ -20,6 +21,8 @@ class NodeThread(threading.Thread):
         self.node = node
         self.host = host
         self.port = port
+
+        self.data_handler = DataHandler(node, self)
 
         self.terminate_flag = threading.Event()
 
@@ -55,7 +58,7 @@ class NodeThread(threading.Thread):
     def handle_connection(self, sock, address):
         connected_node_id = sock.recv(2048).decode(ENCODING)
         sock.send(str(self.id).encode(ENCODING))
-        client_thread = self.create_connection(sock, address)
+        client_thread = self.create_connection(sock, address, self.data_handler.message_queue)
         client_thread.start()
 
     def connect_to(self, address):
@@ -69,8 +72,10 @@ class NodeThread(threading.Thread):
         connected_node_id = sock.recv(1024).decode(ENCODING)
         print(f"Node {self.id} connected with node: {connected_node_id}")
 
-        thread_client = self.create_connection(sock, address)
+        thread_client = self.create_connection(sock, address, self.data_handler.message_queue)
         self.connection_threads[address] = thread_client
+        # TODO change it of place
+        # thread_client.start()
         return thread_client
 
     def disconnect_from(self, address):
@@ -78,18 +83,15 @@ class NodeThread(threading.Thread):
         if connection:
             connection.stop()
         else:
-            print("Not connected with this Node")
+            print(f"Not connected with this Node {address}")
 
     def stop(self):
         self.terminate_flag.set()
 
-    def create_connection(self, sock, addr):
-        return ConnectionThread(sock, self, addr)
+    def create_connection(self, sock, addr, message_queue):
+        return ConnectionThread(sock, self, addr, message_queue)
 
-    def handle_data(self, msg, connection):
-        if constants.DEBUG:
-            print("Node " + str(self.id) + " received : " + str(msg))
-        self.connection_threads[sender] = connection  # Register the connection thread with the actual sender
-        connection.client_address = sender
+
+
 
 

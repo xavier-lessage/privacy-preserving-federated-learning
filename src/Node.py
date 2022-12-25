@@ -1,8 +1,10 @@
-from src.NodeThread import NodeThread
-from MiningThreads import *
+from time import time
 
-
-# from PROJH402.Connections import NodeThread
+from PROJH402.src.Block import Block
+from PROJH402.src.MiningThreads import MiningThread
+from PROJH402.src.NodeThread import NodeThread
+from PROJH402.src.Pingers import ChainPinger, MemPoolPinger
+from PROJH402.src.constants import ENCODING, CHAIN_SYNC_INTERVAL, MEMPOOL_SYNC_INTERVAL
 
 
 class Node:
@@ -13,14 +15,18 @@ class Node:
     def __init__(self, id, host, port, difficulty):
         self.id = id
         self.chain = []
-        self.mem_pool = []
+        self.mem_pool = set()
         self.difficulty = difficulty
 
         # Initialize the first Block
         first_block = Block(0, 0000000, [], self.id, time(), self.difficulty, 0, 0)
         self.chain.append(first_block)
 
-        self.tcp_thread = NodeThread(self, host, port, id)
+        self.peers = {}
+
+        self.node_thread = NodeThread(self, host, port, id)
+
+        self.data_handler = self.node_thread.data_handler
 
         self.mining_thread = MiningThread(self)
 
@@ -37,10 +43,16 @@ class Node:
         """
         starts the NodeThread that handles the TCP connection with other nodes
         """
-        self.tcp_thread.start()
+        self.node_thread.start()
 
     def stop_tcp(self):
-        self.tcp_thread.stop()
+        self.node_thread.stop()
+        self.data_handler.stop()
+
+        peers = list(self.peers.keys())
+        for peer in peers:
+            self.remove_peer(peer)
+        print(f"Node {self.id} stopped")
 
     def verify_chain(self, chain):
         """
@@ -80,16 +92,9 @@ class Node:
         else:
             return self.chain[height]
 
-    def add_to_mempool(self, data):
-        """
-        Adds an element to the mempool list
-        """
-        if data not in self.mem_pool:
-            self.mem_pool.append(data)
-
     def sync_mempool(self, mempool):
         for elem in mempool:
-            self.add_to_mempool(elem)
+            self.mem_pool.add(elem)
             # print(elem)
 
     def sync_chain(self, chain_repr):
@@ -98,13 +103,10 @@ class Node:
         :param chain_repr:
         :return:
         """
-        # if not self.verify_chain(chain_repr):
-        #     return False
         if int(chain_repr[-1][-1]) > self.get_block('last').total_difficulty:
             for block in chain_repr:
                 for elem in block[2]:
-                    if elem in self.mem_pool:
-                        self.mem_pool.pop(self.mem_pool.index(elem))
+                    self.mem_pool.discard(elem)
             for i in reversed(range(int(chain_repr[-1][0]) - self.get_block('last').height)):
                 block = Block(chain_repr[0], chain_repr[1], chain_repr[2], chain_repr[3], chain_repr[4],
                               chain_repr[5], chain_repr[6], chain_repr[7])
@@ -129,3 +131,23 @@ class Node:
         for block in self.chain:
             print(block.__repr__())
         print("\n")
+
+    def add_peer(self, addr):
+        if addr not in self.peers:
+            print(f"Node {self.id} adding peer at {addr}")
+            if addr not in self.node_thread.connection_threads:
+                connection = self.node_thread.connect_to(addr)
+                connection.start()
+            chain_sync_thread = ChainPinger(self, addr, CHAIN_SYNC_INTERVAL)
+            mempool_sync_thread = MemPoolPinger(self, addr, MEMPOOL_SYNC_INTERVAL)
+            self.peers[addr] = [chain_sync_thread, mempool_sync_thread]
+            chain_sync_thread.start()
+            mempool_sync_thread.start()
+
+    def remove_peer(self, addr):
+        sync_threads = self.peers.get(addr)
+        if sync_threads:
+            for thread in sync_threads:
+                thread.stop()
+            self.peers.pop(addr)
+        self.node_thread.disconnect_from(addr)

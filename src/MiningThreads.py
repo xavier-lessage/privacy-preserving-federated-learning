@@ -1,7 +1,8 @@
-from Block import *
+
 import threading
+from random import randint
 from time import sleep, time
-from Node import *
+from PROJH402.src.Block import Block
 
 
 class MiningThread(threading.Thread):

@@ -1,10 +1,12 @@
 from time import time
 
-from PROJH402.src.Block import Block
+# from PROJH402.src.Block import Block
+from PROJH402.src.Block import Block, create_block_from_list
 from PROJH402.src.MiningThreads import MiningThread
 from PROJH402.src.NodeThread import NodeThread
 from PROJH402.src.Pingers import ChainPinger, MemPoolPinger
-from PROJH402.src.constants import ENCODING, CHAIN_SYNC_INTERVAL, MEMPOOL_SYNC_INTERVAL
+from PROJH402.src.constants import ENCODING, CHAIN_SYNC_INTERVAL, MEMPOOL_SYNC_INTERVAL, GENESIS_BLOCK
+from PROJH402.src.utils import compute_hash, verify_chain
 
 
 class Node:
@@ -18,9 +20,9 @@ class Node:
         self.mem_pool = set()
         self.difficulty = difficulty
 
-        # Initialize the first Block
-        first_block = Block(0, 0000000, [], self.id, time(), self.difficulty, 0, 0)
-        self.chain.append(first_block)
+        # Initialize the genesis Block
+        genesis_block = GENESIS_BLOCK
+        self.chain.append(genesis_block)
 
         self.peers = {}
 
@@ -52,37 +54,7 @@ class Node:
         peers = list(self.peers.keys())
         for peer in peers:
             self.remove_peer(peer)
-        print(f"Node {self.id} stopped")
-
-    def verify_chain(self, chain):
-        """
-        Checks every block of the chain to see if the previous_hash matches the hash of the previous block
-        TODO: check the block height
-        """
-        last_block = chain[0]
-        i = 1
-        while i < len(chain):
-            if chain[i].parent_hash == last_block.compute_hash() and chain[i].verify:
-                last_block = chain[i]
-                i += 1
-            else:
-                print("Error in the blockchain")
-                return False
-        return True
-
-    def compare_chains(self, chain):
-        """
-        Compares two chains to determine the one to keep
-        :param chain: Chain to compare with the actual chain of the node
-        :return: True if the input chain is "better" than the actual chain
-                False if the chain is not valid or if the actual chain is better than the input one
-        """
-        if not self.verify_chain(chain):
-            return False
-        if chain[-1].total_difficulty > self.get_block('last').total_difficulty:
-            return True
-        else:
-            return False
+        # print(f"Node {self.id} stopped")
 
     def get_block(self, height):
         if height == 'last':
@@ -97,23 +69,29 @@ class Node:
             self.mem_pool.add(elem)
             # print(elem)
 
-    def sync_chain(self, chain_repr):
-        """
-        To be enhanced
-        :param chain_repr:
-        :return:
-        """
-        if int(chain_repr[-1][-1]) > self.get_block('last').total_difficulty:
-            for block in chain_repr:
-                for elem in block[2]:
-                    self.mem_pool.discard(elem)
-            for i in reversed(range(int(chain_repr[-1][0]) - self.get_block('last').height)):
-                block = Block(chain_repr[0], chain_repr[1], chain_repr[2], chain_repr[3], chain_repr[4],
-                              chain_repr[5], chain_repr[6], chain_repr[7])
-                self.chain.append(block)
-            return True
+    def sync_chain(self, chain_repr, height):
+        print("Merging chains")
+        chain = []
+        # Reconstruct the partial chain
+        for block_repr in chain_repr:
+            block = create_block_from_list(block_repr)
+            chain.append(block)
+
+        if not verify_chain(chain):
+            return
+
+        for block in chain:
+            for transaction in block.data:
+                self.mem_pool.discard(transaction)
+
+        if chain[0].parent_hash == self.get_block(height).hash:
+            # Replace self chain with the other chain
+            del self.chain[height+1:]
+            self.chain.extend(chain)
+            print(f"Node {self.id} has updated its chain")
+            print(self.chain)
         else:
-            return False
+            print("Error here")
 
     def print_chain(self):
         """

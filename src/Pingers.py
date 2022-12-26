@@ -16,8 +16,9 @@ class ChainPinger(threading.Thread):
     def run(self):
         while not self.flag.is_set():
             # TODO
-            content = self.node.chain
-            self.data_handler.send_message_to(self.client_addr, content, "chain")
+            last_block = self.node.get_block('last')
+            content = (last_block.get_header_hash(), last_block.total_difficulty)
+            self.data_handler.send_message_to(self.client_addr, content, "chain_sync")
             sleep(self.timeout)
 
     def stop(self):
@@ -38,7 +39,7 @@ class MemPoolPinger(threading.Thread):
     def run(self):
         while not self.flag.is_set():
             content = self.node.mem_pool
-            self.data_handler.send_message_to(self.client_addr, content, "mempool")
+            self.data_handler.send_message_to(self.client_addr, content, "mempool_sync")
             sleep(self.timeout)
 
     def stop(self):

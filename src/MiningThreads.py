@@ -2,6 +2,9 @@
 import threading
 from random import randint
 from time import sleep, time
+
+from PROJH402.src import constants
+from PROJH402.src.constants import *
 from PROJH402.src.Block import Block
 
 
@@ -28,9 +31,9 @@ class MiningThread(threading.Thread):
                       timestamp, self.difficulty, self.node.get_block('last').total_difficulty, randint(0, 1000))
 
         while not self.flag.is_set():
-            block.update_data(self.node.mem_pool)
-            block.update_time()
-            block.update_diff(self.node.difficulty)
+            last_block = self.node.get_block("last")
+            block.update(last_block.height+1, last_block.hash, last_block.data, self.node.difficulty,
+                         last_block.total_difficulty + self.node.difficulty)
 
             if block.compute_hash()[:self.difficulty] != "0" * self.difficulty:
                 block.increase_nonce()
@@ -38,9 +41,9 @@ class MiningThread(threading.Thread):
             else:
                 self.node.chain.append(block)
                 self.node.mem_pool.clear()
-
-                print("Block added: " + str(block.compute_hash()))
-                print(repr(block) + "\n")
+                if constants.DEBUG:
+                    print("Block added: " + str(block.compute_hash()))
+                    print(repr(block) + "\n")
 
                 block = Block(len(self.node.chain), self.node.get_block('last').hash, self.node.mem_pool.copy(),
                               self.node.id, timestamp, self.difficulty, self.node.get_block('last').total_difficulty,

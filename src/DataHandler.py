@@ -143,7 +143,6 @@ class DataHandler:
             partial_chain = []
             i = height + 1
             print(self.node.chain)
-            verify_chain(self.node.chain)
             while i < len(self.node.chain):
                 partial_chain.append(block_to_list(self.node.get_block(i)))
                 i += 1

@@ -21,6 +21,8 @@ class MiningThread(threading.Thread):
 
         self.flag = threading.Event()
 
+        self.timer = time()
+
     def run(self):
         """
         Increase the nonce until the hash of the block has the expected number of zeros at the front of the hash
@@ -35,7 +37,14 @@ class MiningThread(threading.Thread):
             block.update(last_block.height+1, last_block.hash, last_block.data, self.node.difficulty,
                          last_block.total_difficulty + self.node.difficulty)
 
-            if block.compute_hash()[:self.difficulty] != "0" * self.difficulty:
+            target_string = '1' * (256 - self.difficulty)
+            target_string = target_string.zfill(256)
+
+            hash_int = int(block.compute_hash(), 16)
+            binary_hash = bin(hash_int)
+            binary_hash = binary_hash[3:]
+
+            if binary_hash > target_string:
                 block.increase_nonce()
 
             else:
@@ -48,6 +57,9 @@ class MiningThread(threading.Thread):
                 block = Block(len(self.node.chain), self.node.get_block('last').hash, self.node.mem_pool.copy(),
                               self.node.id, timestamp, self.difficulty, self.node.get_block('last').total_difficulty,
                               randint(0, 1000))
+            if last_block.height>=20:
+                print(time()-self.timer)
+                break
 
     def stop(self):
         self.flag.set()

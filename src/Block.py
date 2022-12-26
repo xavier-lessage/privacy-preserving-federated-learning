@@ -48,11 +48,16 @@ class Block:
         return hash_string
 
     def verify(self):
-        """
-        TODO
-        :return:
-        """
-        pass
+        target_string = '1' * (256 - self.difficulty)
+        target_string = target_string.zfill(256)
+
+        hash_int = int(self.hash, 16)
+        binary_hash = bin(hash_int)
+        binary_hash = binary_hash[3:]
+
+        if target_string > binary_hash:
+            return True
+        return False
 
     def print_header(self):
         """

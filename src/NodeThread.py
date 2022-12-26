@@ -74,8 +74,6 @@ class NodeThread(threading.Thread):
 
         thread_client = self.create_connection(sock, address, self.data_handler.message_queue)
         self.connection_threads[address] = thread_client
-        # TODO change it of place
-        # thread_client.start()
         return thread_client
 
     def disconnect_from(self, address):

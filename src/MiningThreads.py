@@ -29,7 +29,7 @@ class MiningThread(threading.Thread):
         """
         timestamp = time()
 
-        block = Block(len(self.node.chain), self.node.get_block('last').hash, self.node.mem_pool.copy(), self.node.id,
+        block = Block(len(self.node.chain), self.node.get_block('last').hash, self.node.mempool.copy(), self.node.id,
                       timestamp, self.difficulty, self.node.get_block('last').total_difficulty, randint(0, 1000))
 
         while not self.flag.is_set():
@@ -40,7 +40,7 @@ class MiningThread(threading.Thread):
             target_string = '1' * (256 - self.difficulty)
             target_string = target_string.zfill(256)
 
-            hash_int = int(block.compute_hash(), 16)
+            hash_int = int(block.compute_block_hash(), 16)
             binary_hash = bin(hash_int)
             binary_hash = binary_hash[3:]
 
@@ -49,17 +49,14 @@ class MiningThread(threading.Thread):
 
             else:
                 self.node.chain.append(block)
-                self.node.mem_pool.clear()
+                self.node.mempool.clear()
                 if constants.DEBUG:
-                    print("Block added: " + str(block.compute_hash()))
+                    print("Block added: " + str(block.compute_block_hash()))
                     print(repr(block) + "\n")
 
-                block = Block(len(self.node.chain), self.node.get_block('last').hash, self.node.mem_pool.copy(),
+                block = Block(len(self.node.chain), self.node.get_block('last').hash, self.node.mempool.copy(),
                               self.node.id, timestamp, self.difficulty, self.node.get_block('last').total_difficulty,
                               randint(0, 1000))
-            if last_block.height>=20:
-                print(time()-self.timer)
-                break
 
     def stop(self):
         self.flag.set()
@@ -82,9 +79,9 @@ class ProofOfAuthThread(threading.Thread):
         while not self.flag.is_set():
             sleep(self.time)
             timestamp = time()
-            block = Block(len(self.node.chain), self.node.get_block('last').hash, self.node.mem_pool.copy(),
+            block = Block(len(self.node.chain), self.node.get_block('last').hash, self.node.mempool.copy(),
                           self.node.id, timestamp, self.difficulty, self.node.get_block('last').total_difficulty)
             self.node.chain.append(block)
-            self.node.mem_pool.clear()
-            print("Block added: " + str(block.compute_hash()))
+            self.node.mempool.clear()
+            print("Block added: " + str(block.compute_block_hash()))
             print(repr(block) + "\n")

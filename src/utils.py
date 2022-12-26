@@ -9,7 +9,7 @@ def verify_chain(chain):
     last_block = chain[0]
     i = 1
     while i < len(chain):
-        if chain[i].parent_hash == last_block.compute_hash() and chain[i].verify:
+        if chain[i].parent_hash == last_block.compute_block_hash() and chain[i].verify:
             last_block = chain[i]
             i += 1
         else:
@@ -28,3 +28,7 @@ def compute_hash(list):
 
     hash = sha256(hash_string.encode()).hexdigest()
     return hash
+
+
+def verify_transaction(transaction):
+    pass

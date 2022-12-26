@@ -1,12 +1,9 @@
 import pickle
 import threading
-import time
-import uuid
 from queue import Queue
 
 from PROJH402.src import constants
 from PROJH402.src.Block import block_to_list
-from PROJH402.src.utils import compute_hash, verify_chain
 
 
 class DataHandler:
@@ -19,7 +16,7 @@ class DataHandler:
 
         self.flag = threading.Event()
 
-        # {(msg_id, addr) : height}
+        # {addr : height}
         self.pending_block_request = {}
         self.message_queue = Queue()
         threading.Thread(target=self.handle_messages).start()
@@ -43,6 +40,9 @@ class DataHandler:
                 raise e
 
     def handle_data(self, msg, connection):
+        """
+        Choose action to do from the message information
+        """
         if constants.DEBUG:
             print("Node " + str(self.id) + " received : " + str(msg))
 
@@ -56,7 +56,7 @@ class DataHandler:
         self.node.add_peer(sender)
 
         if msg_type == "mempool_sync":
-            self.node.mem_pool.update(msg["data"])
+            self.node.mempool.update(msg["data"])
         if msg_type == "chain_sync":
             self.handle_chain_sync(msg)
         if msg_type == "block":
@@ -80,7 +80,7 @@ class DataHandler:
 
     def send_message_to(self, addr, content, msg_type, msg_id=None):
         receiver = addr
-        message = self.construct_message(content, msg_type, addr, msg_id)
+        message = self.construct_message(content, msg_type, addr)
 
         dumped_message = pickle.dumps(message)
         if receiver not in self.node_thread.connection_threads:
@@ -94,15 +94,8 @@ class DataHandler:
             print(self.node_thread.id)
             raise e
 
-    def construct_message(self, data, msg_type, receiver=None, msg_id=None):
-        message = {"type": msg_type, "receiver": receiver}
-
-        if msg_id is not None:
-            message["msg_id"] = msg_id
-        else:
-            message["msg_id"] = uuid.uuid4()
-        message["sender"] = (self.host, self.port)
-        message["data"] = data
+    def construct_message(self, data, msg_type, receiver=None):
+        message = {"type": msg_type, "receiver": receiver, "sender": (self.host, self.port), "data": data}
         return message
 
     def handle_chain_sync(self, message):

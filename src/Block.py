@@ -3,7 +3,7 @@ from hashlib import sha256
 from random import randint
 from time import time
 
-from PROJH402.src.utils import compute_hash
+from PROJH402.src.utils import compute_hash, verify_transaction
 
 
 class Block:
@@ -22,9 +22,9 @@ class Block:
         self.nonce = nonce
 
         self.transactions_root = self.transactions_hash()
-        self.hash = self.compute_hash()
+        self.hash = self.compute_block_hash()
 
-    def compute_hash(self):
+    def compute_block_hash(self):
         """
         computes the hash of the block header
         :return: hash of the block
@@ -41,13 +41,14 @@ class Block:
         computes the hash of the block transactions
         :return: the hash of the transactions
         """
-        # TODO
-        hash_string = ""
-        hash_string += str(self.data)
-
-        return hash_string
+        self.transactions_root = compute_hash([self.data])
+        return self.transactions_root
 
     def verify(self):
+
+        for transaction in self.data:
+            verify_transaction(transaction)
+
         target_string = '1' * (256 - self.difficulty)
         target_string = target_string.zfill(256)
 
@@ -64,7 +65,7 @@ class Block:
         Prints the block information
         """
         print("Index: ", self.height)
-        print("Hash", self.compute_hash())
+        print("Hash", self.compute_block_hash())
         print("Nonce: ", self.nonce)
         print("Previous: ", self.parent_hash)
         print("data: ", self.data)
@@ -91,15 +92,6 @@ class Block:
         # TODO
         return f'["{self.height}", "{self.parent_hash}", "{self.data}", "{self.miner_id}"' \
                f', "{self.timestamp}", "{self.difficulty}", "{self.total_difficulty}", "{self.nonce}", {self.hash}]'
-
-    def update_time(self):
-        self.timestamp = time()
-
-    def update_diff(self, diff):
-        self.difficulty = diff
-
-    def update_total_diff(self, total_diff):
-        self.total_difficulty = total_diff
 
     def update(self, height, parent_hash, data, difficulty, total_difficulty):
         self.timestamp = time()

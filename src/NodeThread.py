@@ -1,3 +1,4 @@
+import pickle
 import threading
 
 import socket
@@ -45,21 +46,32 @@ class NodeThread(threading.Thread):
                 pass
 
             except Exception as e:
+                print("error")
                 raise e
 
             sleep(0.01)
 
         for connection in self.connection_threads.values():
+            print("stopping all conn in node ")
             connection.stop()
 
         self.sock.close()
         print("Node " + str(self.id) + " stopped")
 
     def handle_connection(self, sock, address):
-        connected_node_id = sock.recv(2048).decode(ENCODING)
-        sock.send(str(self.id).encode(ENCODING))
+        connected_node_info = sock.recv(1024)
+        connected_node_info = pickle.loads(connected_node_info)
+        node_info = self.node.node_info()
+        node_info = pickle.dumps(node_info)
+        sock.send(node_info)
+
+        host = connected_node_info.get("ip")
+        port = connected_node_info.get("port")
+        address = (host, port)
         client_thread = self.create_connection(sock, address, self.data_handler.message_queue)
+        self.connection_threads[address] = client_thread
         client_thread.start()
+        self.node.add_peer(address, node_info)
 
     def connect_to(self, address):
         if address in self.connection_threads:
@@ -68,13 +80,17 @@ class NodeThread(threading.Thread):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect(address)
 
-        sock.send(str(self.id).encode(ENCODING))
-        connected_node_id = sock.recv(1024).decode(ENCODING)
+        node_info = self.node.node_info()
+        node_info = pickle.dumps(node_info)
+        sock.send(node_info)
+        connected_node_info = sock.recv(1024)
+        connected_node_info = pickle.loads(connected_node_info)
+        connected_node_id = connected_node_info.get("id")
         print(f"Node {self.id} connected with node: {connected_node_id}")
 
         thread_client = self.create_connection(sock, address, self.data_handler.message_queue)
         self.connection_threads[address] = thread_client
-        return thread_client
+        return thread_client, connected_node_info
 
     def disconnect_from(self, address):
         connection = self.connection_threads.get(address)

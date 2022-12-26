@@ -47,25 +47,22 @@ class DataHandler:
             print("Node " + str(self.id) + " received : " + str(msg))
 
         if not self.check_message_validity(msg):
+            "not valid"
             return
 
         msg_type = msg["type"]
-        sender = msg["sender"]
-        self.node_thread.connection_threads[sender] = connection  # Register the connection thread with the actual sender
-        connection.client_address = sender
-        self.node.add_peer(sender)
 
         if msg_type == "mempool_sync":
             self.node.mempool.update(msg["data"])
         if msg_type == "chain_sync":
-            self.handle_chain_sync(msg)
+            self.handle_chain_sync(msg, connection)
         if msg_type == "block":
             self.handle_block(msg)
         if msg_type == "chain":
             self.handle_partial_chain(msg)
 
     def check_message_validity(self, message):
-        mandatory_keys = ["data", "type", "receiver", "msg_id", "sender"]
+        mandatory_keys = ["data", "type", "receiver", "sender"]
         if isinstance(message, dict):
             for key in mandatory_keys:
                 if key not in message:
@@ -73,7 +70,7 @@ class DataHandler:
 
             if message["receiver"][0] != self.host or message["receiver"][1] != self.port:
                 # wrong address
-                print("wrong add")
+                print("wrong addr")
                 return False
             return True
         return False
@@ -84,21 +81,16 @@ class DataHandler:
 
         dumped_message = pickle.dumps(message)
         if receiver not in self.node_thread.connection_threads:
-            connection = self.node_thread.connect_to(receiver)
+            connection, node_info = self.node_thread.connect_to(receiver)
         else:
             connection = self.node_thread.connection_threads[receiver]
-        try:
-            connection.send(dumped_message)
-
-        except Exception as e:
-            print(self.node_thread.id)
-            raise e
+        connection.send(dumped_message)
 
     def construct_message(self, data, msg_type, receiver=None):
         message = {"type": msg_type, "receiver": receiver, "sender": (self.host, self.port), "data": data}
         return message
 
-    def handle_chain_sync(self, message):
+    def handle_chain_sync(self, message, connection):
         last_block = self.node.get_block('last')
         if message["data"] == (last_block.get_header_hash(), last_block.total_difficulty):
             # Chains are synchronised

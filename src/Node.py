@@ -29,7 +29,10 @@ class Node:
         genesis_block = GENESIS_BLOCK
         self.chain.append(genesis_block)
 
+        # {addr: node_info}
         self.peers = {}
+        # {addr : [sync_threads]}
+        self.sync_threads = {}
 
         self.node_thread = NodeThread(self, host, port, id)
 
@@ -60,7 +63,7 @@ class Node:
         self.node_thread.stop()
         self.data_handler.stop()
 
-        peers = list(self.peers.keys())
+        peers = list(self.sync_threads.keys())
         for peer in peers:
             self.remove_peer(peer)
         self.syncing = False
@@ -118,27 +121,29 @@ class Node:
             print(block.__repr__())
         print("\n")
 
-    def add_peer(self, addr):
+    def add_peer(self, addr, node_info=None):
         if addr not in self.peers:
             print(f"Node {self.id} adding peer at {addr}")
             if addr not in self.node_thread.connection_threads:
-                connection = self.node_thread.connect_to(addr)
+                # Connection
+                connection, node_info = self.node_thread.connect_to(addr)
                 connection.start()
+            self.peers[addr] = node_info
             chain_sync_thread = ChainPinger(self, addr, CHAIN_SYNC_INTERVAL)
             mempool_sync_thread = MemPoolPinger(self, addr, MEMPOOL_SYNC_INTERVAL)
-            self.peers[addr] = [chain_sync_thread, mempool_sync_thread]
+            self.sync_threads[addr] = [chain_sync_thread, mempool_sync_thread]
             chain_sync_thread.start()
             mempool_sync_thread.start()
 
     def remove_peer(self, addr):
-        sync_threads = self.peers.get(addr)
+        sync_threads = self.sync_threads.get(addr)
         if sync_threads:
             for thread in sync_threads:
                 thread.stop()
-            self.peers.pop(addr)
+            self.sync_threads.pop(addr)
         self.node_thread.disconnect_from(addr)
 
     def node_info(self):
         protocol = {"difficulty": self.difficulty}
-        info = {"id": self.id, "ip": self.host, 'listenAddr': f"[{self.host}]:{self.port}", "protocol": protocol}
+        info = {"id": self.id, "ip": self.host, "port": self.port, "protocol": protocol}
         return info

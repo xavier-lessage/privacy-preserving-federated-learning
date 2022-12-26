@@ -2,7 +2,7 @@ import pickle
 
 import socket
 import threading
-from time import sleep
+from time import sleep, time
 
 from PROJH402.src.Pingers import ChainPinger, MemPoolPinger
 from PROJH402.src.constants import MEMPOOL_SYNC_INTERVAL, CHAIN_SYNC_INTERVAL
@@ -21,6 +21,8 @@ class ConnectionThread(threading.Thread):
 
         self.terminate_flag = threading.Event()
         self.sock.settimeout(timeout)
+
+        self.timer = time()
 
     def send(self, data):
         # self.sock.sendall(data.encode("utf-8"))

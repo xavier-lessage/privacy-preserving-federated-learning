@@ -39,8 +39,14 @@ class MemPoolPinger(threading.Thread):
     def run(self):
         while not self.flag.is_set():
             content = self.node.mempool
-            self.data_handler.send_message_to(self.client_addr, content, "mempool_sync")
-            sleep(self.timeout)
+            try:
+                self.data_handler.send_message_to(self.client_addr, content, "mempool_sync")
+                sleep(self.timeout)
+            except Exception as e:
+                print(self.client_addr)
+                print(content)
+                print(e)
+                raise e
 
     def stop(self):
         self.flag.set()

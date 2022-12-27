@@ -2,6 +2,7 @@ import pickle
 import threading
 
 import socket
+import urllib.parse
 from queue import Queue
 from time import sleep
 
@@ -48,17 +49,13 @@ class NodeThread(threading.Thread):
                 pass
 
             except Exception as e:
-                print("error")
                 raise e
 
             sleep(0.01)
 
             while not self.disconnections.empty():
-                address = self.disconnections.get()
-                self.node.remove_peer(address)
-                connection = self.connection_threads.pop(address, None)
-                if connection:
-                    connection.stop()
+                enode = self.disconnections.get()
+                self.node.remove_peer(enode)
 
         for connection in self.connection_threads.values():
             connection.stop()
@@ -69,19 +66,21 @@ class NodeThread(threading.Thread):
     def handle_connection(self, sock):
         connected_node_info = sock.recv(1024)
         connected_node_info = pickle.loads(connected_node_info)
+
         node_info = self.node.node_info()
         node_info = pickle.dumps(node_info)
         sock.send(node_info)
 
-        host = connected_node_info.get("ip")
-        port = connected_node_info.get("port")
-        address = (host, port)
-        client_thread = self.create_connection(sock, address, self.data_handler.message_queue)
-        self.connection_threads[address] = client_thread
-        client_thread.start()
-        self.node.add_peer(address, connected_node_info)
+        enode = connected_node_info.get("enode")
+        connection_thread = self.create_connection(sock, enode, self.data_handler.message_queue)
+        self.connection_threads[enode] = connection_thread
+        connection_thread.start()
+        self.node.add_peer(enode, connected_node_info)
 
-    def connect_to(self, address):
+    def connect_to(self, enode):
+        parsed_enode = urllib.parse.urlparse(enode)
+        address = (parsed_enode.hostname, parsed_enode.port)
+
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect(address)
 
@@ -91,25 +90,24 @@ class NodeThread(threading.Thread):
         connected_node_info = sock.recv(1024)
         connected_node_info = pickle.loads(connected_node_info)
         connected_node_id = connected_node_info.get("id")
-        print(f"Node {self.id} connected with node: {connected_node_id}")
+        if constants.DEBUG:
+            print(f"Node {self.id} connected with node: {connected_node_id}")
 
-        thread_client = self.create_connection(sock, address, self.data_handler.message_queue)
-        self.connection_threads[address] = thread_client
+        thread_client = self.create_connection(sock, enode, self.data_handler.message_queue)
+        self.connection_threads[enode] = thread_client
         return thread_client, connected_node_info
 
-    def disconnect_from(self, address):
-        connection = self.connection_threads.get(address)
+    def disconnect_from(self, enode):
+        connection = self.connection_threads.get(enode)
         if connection:
             connection.stop()
-            self.connection_threads.pop(address)
-        else:
-            print(f"Not connected with this Node {address}")
+            self.connection_threads.pop(enode)
 
     def stop(self):
         self.terminate_flag.set()
 
-    def create_connection(self, sock, addr, message_queue):
-        return ConnectionThread(sock, self, addr, message_queue, self.disconnections)
+    def create_connection(self, sock, enode, message_queue):
+        return ConnectionThread(sock, self, enode, message_queue, self.disconnections)
 
 
 

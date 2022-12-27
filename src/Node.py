@@ -17,44 +17,56 @@ class Node:
     def __init__(self, id, host, port, difficulty):
         self.id = id
         self.chain = []
-        self.mem_pool = set()
+        self.mempool = set()
         self.difficulty = difficulty
+
+        self.host = host
+        self.port = port
+
+        self.enode = f"enode://{self.id}@{self.host}:{self.port}"
 
         # Initialize the genesis Block
         genesis_block = GENESIS_BLOCK
         self.chain.append(genesis_block)
 
+        # {addr: node_info}
         self.peers = {}
+        # {addr : [sync_threads]}
+        self.sync_threads = {}
 
         self.node_thread = NodeThread(self, host, port, id)
 
+        self.syncing = False
         self.data_handler = self.node_thread.data_handler
 
+        self.mining = False
         self.mining_thread = MiningThread(self)
 
     def start_mining(self):
         print("Starting the mining \n")
         self.mining_thread.start()
-        # self.poa_thread.start()
+        self.mining = True
 
     def stop_mining(self):
         self.mining_thread.stop()
+        self.mining = False
         print("Node " + str(self.id) + " stopped mining")
 
     def start_tcp(self):
         """
         starts the NodeThread that handles the TCP connection with other nodes
         """
+        self.syncing = True
         self.node_thread.start()
 
     def stop_tcp(self):
         self.node_thread.stop()
         self.data_handler.stop()
 
-        peers = list(self.peers.keys())
+        peers = list(self.sync_threads.keys())
         for peer in peers:
             self.remove_peer(peer)
-        # print(f"Node {self.id} stopped")
+        self.syncing = False
 
     def get_block(self, height):
         if height == 'last':
@@ -66,8 +78,7 @@ class Node:
 
     def sync_mempool(self, mempool):
         for elem in mempool:
-            self.mem_pool.add(elem)
-            # print(elem)
+            self.mempool.add(elem)
 
     def sync_chain(self, chain_repr, height):
         print("Merging chains")
@@ -82,7 +93,7 @@ class Node:
 
         for block in chain:
             for transaction in block.data:
-                self.mem_pool.discard(transaction)
+                self.mempool.discard(transaction)
 
         if chain[0].parent_hash == self.get_block(height).hash:
             # Replace self chain with the other chain
@@ -110,22 +121,29 @@ class Node:
             print(block.__repr__())
         print("\n")
 
-    def add_peer(self, addr):
+    def add_peer(self, addr, node_info=None):
         if addr not in self.peers:
             print(f"Node {self.id} adding peer at {addr}")
             if addr not in self.node_thread.connection_threads:
-                connection = self.node_thread.connect_to(addr)
+                # Connection
+                connection, node_info = self.node_thread.connect_to(addr)
                 connection.start()
+            self.peers[addr] = node_info
             chain_sync_thread = ChainPinger(self, addr, CHAIN_SYNC_INTERVAL)
             mempool_sync_thread = MemPoolPinger(self, addr, MEMPOOL_SYNC_INTERVAL)
-            self.peers[addr] = [chain_sync_thread, mempool_sync_thread]
+            self.sync_threads[addr] = [chain_sync_thread, mempool_sync_thread]
             chain_sync_thread.start()
             mempool_sync_thread.start()
 
     def remove_peer(self, addr):
-        sync_threads = self.peers.get(addr)
+        sync_threads = self.sync_threads.get(addr)
         if sync_threads:
             for thread in sync_threads:
                 thread.stop()
-            self.peers.pop(addr)
+            self.sync_threads.pop(addr)
         self.node_thread.disconnect_from(addr)
+
+    def node_info(self):
+        protocol = {"difficulty": self.difficulty}
+        info = {"id": self.id, "ip": self.host, "port": self.port, "protocol": protocol}
+        return info

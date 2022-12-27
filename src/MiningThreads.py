@@ -21,13 +21,15 @@ class MiningThread(threading.Thread):
 
         self.flag = threading.Event()
 
+        self.timer = time()
+
     def run(self):
         """
         Increase the nonce until the hash of the block has the expected number of zeros at the front of the hash
         """
         timestamp = time()
 
-        block = Block(len(self.node.chain), self.node.get_block('last').hash, self.node.mem_pool.copy(), self.node.id,
+        block = Block(len(self.node.chain), self.node.get_block('last').hash, self.node.mempool.copy(), self.node.id,
                       timestamp, self.difficulty, self.node.get_block('last').total_difficulty, randint(0, 1000))
 
         while not self.flag.is_set():
@@ -35,17 +37,24 @@ class MiningThread(threading.Thread):
             block.update(last_block.height+1, last_block.hash, last_block.data, self.node.difficulty,
                          last_block.total_difficulty + self.node.difficulty)
 
-            if block.compute_hash()[:self.difficulty] != "0" * self.difficulty:
+            target_string = '1' * (256 - self.difficulty)
+            target_string = target_string.zfill(256)
+
+            hash_int = int(block.compute_block_hash(), 16)
+            binary_hash = bin(hash_int)
+            binary_hash = binary_hash[3:]
+
+            if binary_hash > target_string:
                 block.increase_nonce()
 
             else:
                 self.node.chain.append(block)
-                self.node.mem_pool.clear()
+                self.node.mempool.clear()
                 if constants.DEBUG:
-                    print("Block added: " + str(block.compute_hash()))
+                    print("Block added: " + str(block.compute_block_hash()))
                     print(repr(block) + "\n")
 
-                block = Block(len(self.node.chain), self.node.get_block('last').hash, self.node.mem_pool.copy(),
+                block = Block(len(self.node.chain), self.node.get_block('last').hash, self.node.mempool.copy(),
                               self.node.id, timestamp, self.difficulty, self.node.get_block('last').total_difficulty,
                               randint(0, 1000))
 
@@ -70,9 +79,9 @@ class ProofOfAuthThread(threading.Thread):
         while not self.flag.is_set():
             sleep(self.time)
             timestamp = time()
-            block = Block(len(self.node.chain), self.node.get_block('last').hash, self.node.mem_pool.copy(),
+            block = Block(len(self.node.chain), self.node.get_block('last').hash, self.node.mempool.copy(),
                           self.node.id, timestamp, self.difficulty, self.node.get_block('last').total_difficulty)
             self.node.chain.append(block)
-            self.node.mem_pool.clear()
-            print("Block added: " + str(block.compute_hash()))
+            self.node.mempool.clear()
+            print("Block added: " + str(block.compute_block_hash()))
             print(repr(block) + "\n")

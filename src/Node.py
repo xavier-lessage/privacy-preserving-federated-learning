@@ -137,6 +137,7 @@ class Node:
             mempool_sync_thread.start()
 
     def remove_peer(self, addr):
+        print(f"Node {self.id} removing peer at {addr}")
         sync_threads = self.sync_threads.get(addr)
         if sync_threads:
             for thread in sync_threads:

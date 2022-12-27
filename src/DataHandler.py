@@ -81,7 +81,7 @@ class DataHandler:
 
         dumped_message = pickle.dumps(message)
         if receiver not in self.node_thread.connection_threads:
-            connection, node_info = self.node_thread.connect_to(receiver)
+            return
         else:
             connection = self.node_thread.connection_threads[receiver]
         connection.send(dumped_message)

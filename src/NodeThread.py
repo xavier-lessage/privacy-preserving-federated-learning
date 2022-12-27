@@ -2,6 +2,7 @@ import pickle
 import threading
 
 import socket
+from queue import Queue
 from time import sleep
 
 from PROJH402.src import constants
@@ -28,6 +29,7 @@ class NodeThread(threading.Thread):
         self.terminate_flag = threading.Event()
 
         self.connection_threads = {}
+        self.disconnections = Queue()
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -40,7 +42,7 @@ class NodeThread(threading.Thread):
         while not self.terminate_flag.is_set():
             try:
                 client_sock, client_address = self.sock.accept()
-                self.handle_connection(client_sock, client_address)
+                self.handle_connection(client_sock)
 
             except socket.timeout:
                 pass
@@ -51,14 +53,20 @@ class NodeThread(threading.Thread):
 
             sleep(0.01)
 
+            while not self.disconnections.empty():
+                address = self.disconnections.get()
+                self.node.remove_peer(address)
+                connection = self.connection_threads.pop(address, None)
+                if connection:
+                    connection.stop()
+
         for connection in self.connection_threads.values():
-            print("stopping all conn in node ")
             connection.stop()
 
         self.sock.close()
         print("Node " + str(self.id) + " stopped")
 
-    def handle_connection(self, sock, address):
+    def handle_connection(self, sock):
         connected_node_info = sock.recv(1024)
         connected_node_info = pickle.loads(connected_node_info)
         node_info = self.node.node_info()
@@ -71,12 +79,9 @@ class NodeThread(threading.Thread):
         client_thread = self.create_connection(sock, address, self.data_handler.message_queue)
         self.connection_threads[address] = client_thread
         client_thread.start()
-        self.node.add_peer(address, node_info)
+        self.node.add_peer(address, connected_node_info)
 
     def connect_to(self, address):
-        if address in self.connection_threads:
-            return self.connection_threads.get(address)
-
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect(address)
 
@@ -96,6 +101,7 @@ class NodeThread(threading.Thread):
         connection = self.connection_threads.get(address)
         if connection:
             connection.stop()
+            self.connection_threads.pop(address)
         else:
             print(f"Not connected with this Node {address}")
 
@@ -103,7 +109,7 @@ class NodeThread(threading.Thread):
         self.terminate_flag.set()
 
     def create_connection(self, sock, addr, message_queue):
-        return ConnectionThread(sock, self, addr, message_queue)
+        return ConnectionThread(sock, self, addr, message_queue, self.disconnections)
 
 
 

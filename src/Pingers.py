@@ -18,21 +18,29 @@ class ChainPinger(threading.Thread):
             # TODO
             last_block = self.node.get_block('last')
             content = (last_block.get_header_hash(), last_block.total_difficulty)
-            self.data_handler.send_message_to(self.client_addr, content, "chain_sync")
-            sleep(self.timeout)
+            try:
+                self.data_handler.send_message_to(self.client_addr, content, "chain_sync")
+                sleep(self.timeout)
+
+            except ConnectionAbortedError:
+                self.flag.set()
+
+            except Exception as e:
+                self.flag.set()
+                raise e
 
     def stop(self):
         self.flag.set()
 
 
 class MemPoolPinger(threading.Thread):
-    def __init__(self, node, client_addr, timeout=2.0):
+    def __init__(self, node, client_addr, interval=2.0):
         super(MemPoolPinger, self).__init__()
 
         self.node = node
         self.data_handler = node.data_handler
         self.client_addr = client_addr
-        self.timeout = timeout
+        self.interval = interval
 
         self.flag = threading.Event()
 
@@ -41,11 +49,13 @@ class MemPoolPinger(threading.Thread):
             content = self.node.mempool
             try:
                 self.data_handler.send_message_to(self.client_addr, content, "mempool_sync")
-                sleep(self.timeout)
+                sleep(self.interval)
+
+            except ConnectionAbortedError:
+                self.flag.set()
+
             except Exception as e:
-                print(self.client_addr)
-                print(content)
-                print(e)
+                self.flag.set()
                 raise e
 
     def stop(self):

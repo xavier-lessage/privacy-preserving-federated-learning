@@ -4,7 +4,6 @@ from hashlib import sha256
 def verify_chain(chain):
     """
     Checks every block of the chain to see if the previous_hash matches the hash of the previous block
-    TODO: check the block height
     """
     last_block = chain[0]
     i = 1

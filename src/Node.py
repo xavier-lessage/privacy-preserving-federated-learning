@@ -1,4 +1,5 @@
-from time import time
+import threading
+from time import time, sleep
 
 # from PROJH402.src.Block import Block
 from PROJH402.src.Block import Block, create_block_from_list
@@ -60,12 +61,12 @@ class Node:
         self.node_thread.start()
 
     def stop_tcp(self):
-        self.node_thread.stop()
-        self.data_handler.stop()
-
         peers = list(self.sync_threads.keys())
         for peer in peers:
             self.remove_peer(peer)
+
+        self.node_thread.stop()
+        self.data_handler.stop()
         self.syncing = False
 
     def get_block(self, height):
@@ -142,8 +143,9 @@ class Node:
                 thread.stop()
             self.sync_threads.pop(addr)
         self.node_thread.disconnect_from(addr)
+        self.peers.pop(addr, None)
 
     def node_info(self):
         protocol = {"difficulty": self.difficulty}
-        info = {"id": self.id, "ip": self.host, "port": self.port, "protocol": protocol}
+        info = {"enode": self.enode, "id": self.id, "ip": self.host, "port": self.port, "protocol": protocol}
         return info

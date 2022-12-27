@@ -3,12 +3,12 @@ from time import sleep
 
 
 class ChainPinger(threading.Thread):
-    def __init__(self, node, client_addr, timeout=2.0):
+    def __init__(self, node, enode, timeout=2.0):
         super(ChainPinger, self).__init__()
 
         self.node = node
         self.data_handler = node.data_handler
-        self.client_addr = client_addr
+        self.dest_enode = enode
         self.timeout = timeout
 
         self.flag = threading.Event()
@@ -19,7 +19,7 @@ class ChainPinger(threading.Thread):
             last_block = self.node.get_block('last')
             content = (last_block.get_header_hash(), last_block.total_difficulty)
             try:
-                self.data_handler.send_message_to(self.client_addr, content, "chain_sync")
+                self.data_handler.send_message_to(self.dest_enode, content, "chain_sync")
                 sleep(self.timeout)
 
             except ConnectionAbortedError:
@@ -34,12 +34,12 @@ class ChainPinger(threading.Thread):
 
 
 class MemPoolPinger(threading.Thread):
-    def __init__(self, node, client_addr, interval=2.0):
+    def __init__(self, node, dest_enode, interval=2.0):
         super(MemPoolPinger, self).__init__()
 
         self.node = node
         self.data_handler = node.data_handler
-        self.client_addr = client_addr
+        self.dest_enode = dest_enode
         self.interval = interval
 
         self.flag = threading.Event()
@@ -48,7 +48,7 @@ class MemPoolPinger(threading.Thread):
         while not self.flag.is_set():
             content = self.node.mempool
             try:
-                self.data_handler.send_message_to(self.client_addr, content, "mempool_sync")
+                self.data_handler.send_message_to(self.dest_enode, content, "mempool_sync")
                 sleep(self.interval)
 
             except ConnectionAbortedError:

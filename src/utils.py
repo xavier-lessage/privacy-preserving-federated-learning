@@ -1,3 +1,4 @@
+import urllib.parse
 from hashlib import sha256
 
 
@@ -31,3 +32,5 @@ def compute_hash(list):
 
 def verify_transaction(transaction):
     pass
+
+

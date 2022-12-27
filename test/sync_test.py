@@ -20,13 +20,13 @@ def f():
     node1.start_mining()
     node2.start_mining()
 
-    node0.add_peer((LOCALHOST, 1235))
-    node0.add_peer((LOCALHOST, 1236))
+    node0.add_peer(node1.enode)
+    node0.add_peer(node2.enode)
 
     sleep(10)
-    node0.remove_peer((LOCALHOST, 1235))
+    node0.remove_peer(node1.enode)
     sleep(12)
-    node0.add_peer((LOCALHOST, 1235))
+    node0.add_peer(node1.enode)
 
 
 if __name__ == '__main__':

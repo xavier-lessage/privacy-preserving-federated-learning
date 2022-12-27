@@ -10,13 +10,12 @@ class DataHandler:
     def __init__(self, node, node_thread):
         self.node = node
         self.node_thread = node_thread
-        self.host = node_thread.host
-        self.port = node_thread.port
+        self.enode = self.node.enode
         self.id = node.id
 
         self.flag = threading.Event()
 
-        # {addr : height}
+        # {enode : height}
         self.pending_block_request = {}
         self.message_queue = Queue()
         threading.Thread(target=self.handle_messages).start()
@@ -31,15 +30,15 @@ class DataHandler:
         while not self.flag.is_set():
             try:
                 while not self.message_queue.empty():
-                    msg, connection = self.message_queue.get()
+                    msg = self.message_queue.get()
                     if msg:
-                        self.handle_data(msg, connection)
+                        self.handle_data(msg)
 
             except Exception as e:
                 self.node.stop_tcp()
                 raise e
 
-    def handle_data(self, msg, connection):
+    def handle_data(self, msg):
         """
         Choose action to do from the message information
         """
@@ -47,7 +46,7 @@ class DataHandler:
             print("Node " + str(self.id) + " received : " + str(msg))
 
         if not self.check_message_validity(msg):
-            "not valid"
+            print("invalid message")
             return
 
         msg_type = msg["type"]
@@ -55,7 +54,7 @@ class DataHandler:
         if msg_type == "mempool_sync":
             self.node.mempool.update(msg["data"])
         if msg_type == "chain_sync":
-            self.handle_chain_sync(msg, connection)
+            self.handle_chain_sync(msg)
         if msg_type == "block":
             self.handle_block(msg)
         if msg_type == "chain":
@@ -68,33 +67,33 @@ class DataHandler:
                 if key not in message:
                     return False
 
-            if message["receiver"][0] != self.host or message["receiver"][1] != self.port:
+            if message["receiver"] != self.enode:
                 # wrong address
                 print("wrong addr")
                 return False
             return True
         return False
 
-    def send_message_to(self, addr, content, msg_type, msg_id=None):
-        receiver = addr
-        message = self.construct_message(content, msg_type, addr)
+    def send_message_to(self, enode, content, msg_type):
+        message = self.construct_message(content, msg_type, enode)
 
         dumped_message = pickle.dumps(message)
-        if receiver not in self.node_thread.connection_threads:
+        if enode not in self.node_thread.connection_threads:
             return
         else:
-            connection = self.node_thread.connection_threads[receiver]
+            connection = self.node_thread.connection_threads[enode]
         connection.send(dumped_message)
 
-    def construct_message(self, data, msg_type, receiver=None):
-        message = {"type": msg_type, "receiver": receiver, "sender": (self.host, self.port), "data": data}
+    def construct_message(self, data, msg_type, receiver):
+        message = {"type": msg_type, "receiver": receiver, "sender": self.enode, "data": data}
         return message
 
-    def handle_chain_sync(self, message, connection):
+    def handle_chain_sync(self, message):
         last_block = self.node.get_block('last')
         if message["data"] == (last_block.get_header_hash(), last_block.total_difficulty):
             # Chains are synchronised
-            print(f"Node {self.node.id} is chain sync")
+            if constants.DEBUG:
+                print(f"Node {self.node.id} is chain sync")
             return
 
         if last_block.total_difficulty < message["data"][1]:
@@ -103,15 +102,15 @@ class DataHandler:
 
             self.request_block(len(self.node.chain) - 1, message["sender"])
 
-    def request_block(self, height, addr):
-        if addr in self.pending_block_request:
-            if self.pending_block_request[addr] < height:
+    def request_block(self, height, enode):
+        if enode in self.pending_block_request:
+            if self.pending_block_request[enode] < height:
                 # Currently in a process to find the common block
                 return
         block = self.node.get_block(height)
         content = (block.get_header_hash(), block.total_difficulty, height)
-        self.send_message_to(addr, content, "block")
-        self.pending_block_request[addr] = height
+        self.send_message_to(enode, content, "block")
+        self.pending_block_request[enode] = height
 
     def handle_block(self, message):
         """
@@ -137,6 +136,9 @@ class DataHandler:
         self.send_message_to(message["sender"], content, "chain")
 
     def handle_partial_chain(self, message):
+        """
+        Handle the result of the block request
+        """
         height = self.pending_block_request.get(message["sender"])
         if message["data"] is None:
             # Try again with chain[height-1]

@@ -1,4 +1,5 @@
 import threading
+import urllib.parse
 from time import time, sleep
 
 # from PROJH402.src.Block import Block
@@ -30,9 +31,9 @@ class Node:
         genesis_block = GENESIS_BLOCK
         self.chain.append(genesis_block)
 
-        # {addr: node_info}
+        # {enode: node_info}
         self.peers = {}
-        # {addr : [sync_threads]}
+        # {enode : [sync_threads]}
         self.sync_threads = {}
 
         self.node_thread = NodeThread(self, host, port, id)
@@ -122,29 +123,29 @@ class Node:
             print(block.__repr__())
         print("\n")
 
-    def add_peer(self, addr, node_info=None):
-        if addr not in self.peers:
-            print(f"Node {self.id} adding peer at {addr}")
-            if addr not in self.node_thread.connection_threads:
+    def add_peer(self, enode, node_info=None):
+        if enode not in self.peers:
+            print(f"Node {self.id} adding peer at {enode}")
+            if enode not in self.node_thread.connection_threads:
                 # Connection
-                connection, node_info = self.node_thread.connect_to(addr)
+                connection, node_info = self.node_thread.connect_to(enode)
                 connection.start()
-            self.peers[addr] = node_info
-            chain_sync_thread = ChainPinger(self, addr, CHAIN_SYNC_INTERVAL)
-            mempool_sync_thread = MemPoolPinger(self, addr, MEMPOOL_SYNC_INTERVAL)
-            self.sync_threads[addr] = [chain_sync_thread, mempool_sync_thread]
+            self.peers[enode] = node_info
+            chain_sync_thread = ChainPinger(self, enode, CHAIN_SYNC_INTERVAL)
+            mempool_sync_thread = MemPoolPinger(self, enode, MEMPOOL_SYNC_INTERVAL)
+            self.sync_threads[enode] = [chain_sync_thread, mempool_sync_thread]
             chain_sync_thread.start()
             mempool_sync_thread.start()
 
-    def remove_peer(self, addr):
-        print(f"Node {self.id} removing peer at {addr}")
-        sync_threads = self.sync_threads.get(addr)
+    def remove_peer(self, enode):
+        print(f"Node {self.id} removing peer at {enode}")
+        sync_threads = self.sync_threads.get(enode)
         if sync_threads:
             for thread in sync_threads:
                 thread.stop()
-            self.sync_threads.pop(addr)
-        self.node_thread.disconnect_from(addr)
-        self.peers.pop(addr, None)
+            self.sync_threads.pop(enode)
+        self.node_thread.disconnect_from(enode)
+        self.peers.pop(enode, None)
 
     def node_info(self):
         protocol = {"difficulty": self.difficulty}

@@ -11,11 +11,11 @@ PORT = 65432
 
 
 class ConnectionThread(threading.Thread):
-    def __init__(self, sock, main_node_thread, addr, message_queue, disconnection_queue, timeout=8.0):
+    def __init__(self, sock, main_node_thread, enode, message_queue, disconnection_queue, timeout=8.0):
         super().__init__()
 
         self.node_thread = main_node_thread
-        self.addr = addr
+        self.enode = enode
         self.sock = sock
         self.message_queue = message_queue
         self.disconnection_queue = disconnection_queue
@@ -37,7 +37,7 @@ class ConnectionThread(threading.Thread):
             try:
                 data = self.sock.recv(4096)
                 msg = pickle.loads(data)
-                self.message_queue.put((msg, self))
+                self.message_queue.put(msg)
 
             except socket.timeout:
                 self.terminate_flag.set()
@@ -45,15 +45,14 @@ class ConnectionThread(threading.Thread):
             except EOFError:
                 pass
 
-            except ConnectionResetError or ConnectionAbortedError:
-                print("A Connection ended abruptly")
+            except (ConnectionResetError, ConnectionAbortedError):
                 self.terminate_flag.set()
 
             except Exception as e:
                 self.terminate_flag.set()
                 raise e
 
-        self.disconnection_queue.put(self.addr)
+        self.disconnection_queue.put(self.enode)
         self.sock.settimeout(None)
         self.sock.close()
         sleep(1)

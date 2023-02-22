@@ -15,7 +15,6 @@ class ChainPinger(threading.Thread):
 
     def run(self):
         while not self.flag.is_set():
-            # TODO
             last_block = self.node.get_block('last')
             content = (last_block.get_header_hash(), last_block.total_difficulty)
             try:

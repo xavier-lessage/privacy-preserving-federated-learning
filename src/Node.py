@@ -104,24 +104,7 @@ class Node:
             print(f"Node {self.id} has updated its chain")
             print(self.chain)
         else:
-            print("Error here")
-
-    def print_chain(self):
-        """
-        Prints the complete chain information, block by block
-        """
-        print("Node: ", self.id)
-        for block in self.chain:
-            block.print_header()
-
-    def compact_print(self):
-        """
-        Prints a compact version of the blockchain
-        """
-        print("Node: ", self.id)
-        for block in self.chain:
-            print(block.__repr__())
-        print("\n")
+            print("Chain does not fit here")
 
     def add_peer(self, enode, node_info=None):
         if enode not in self.peers:

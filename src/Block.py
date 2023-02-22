@@ -45,7 +45,6 @@ class Block:
         return self.transactions_root
 
     def verify(self):
-
         for transaction in self.data:
             verify_transaction(transaction)
 

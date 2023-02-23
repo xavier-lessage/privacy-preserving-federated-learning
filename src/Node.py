@@ -4,10 +4,9 @@ from time import time, sleep
 
 # from PROJH402.src.Block import Block
 from PROJH402.src.Block import Block, create_block_from_list
-from PROJH402.src.MiningThreads import MiningThread
 from PROJH402.src.NodeThread import NodeThread
 from PROJH402.src.Pingers import ChainPinger, MemPoolPinger
-from PROJH402.src.constants import ENCODING, CHAIN_SYNC_INTERVAL, MEMPOOL_SYNC_INTERVAL, GENESIS_BLOCK
+from PROJH402.src.constants import ENCODING, CHAIN_SYNC_INTERVAL, MEMPOOL_SYNC_INTERVAL
 from PROJH402.src.utils import compute_hash, verify_chain
 
 
@@ -16,20 +15,19 @@ class Node:
     Class representing a 'user' that has his id, his blockchain and his mem-pool
     """
 
-    def __init__(self, id, host, port, difficulty):
+    def __init__(self, id, host, port, consensus):
         self.id = id
         self.chain = []
         self.mempool = set()
-        self.difficulty = difficulty
 
         self.host = host
         self.port = port
 
         self.enode = f"enode://{self.id}@{self.host}:{self.port}"
 
+        self.consensus = consensus
         # Initialize the genesis Block
-        genesis_block = GENESIS_BLOCK
-        self.chain.append(genesis_block)
+        self.chain.append(self.consensus.genesis)
 
         # {enode: node_info}
         self.peers = {}
@@ -42,7 +40,7 @@ class Node:
         self.data_handler = self.node_thread.data_handler
 
         self.mining = False
-        self.mining_thread = MiningThread(self)
+        self.mining_thread = consensus.block_generation(self)
 
     def start_mining(self):
         print("Starting the mining \n")
@@ -90,7 +88,7 @@ class Node:
             block = create_block_from_list(block_repr)
             chain.append(block)
 
-        if not verify_chain(chain):
+        if not self.verify_chain(chain):
             return
 
         for block in chain:
@@ -131,6 +129,12 @@ class Node:
         self.peers.pop(enode, None)
 
     def node_info(self):
-        protocol = {"difficulty": self.difficulty}
+        protocol = {"consensus": self.consensus}
         info = {"enode": self.enode, "id": self.id, "ip": self.host, "port": self.port, "protocol": protocol}
         return info
+
+    def verify_chain(self, chain):
+        """
+        Checks every block of the chain to see if the previous_hash matches the hash of the previous block
+        """
+        self.consensus.verify_chain(chain)

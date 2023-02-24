@@ -30,7 +30,7 @@ class ProofOfAuthority:
         i = 1
         stack = 0
         while i < len(chain):
-            if chain[i].timestamp - last_block >= 15 and self.verify_block(chain[i]):
+            if chain[i].timestamp - last_block >= BLOCK_PERIOD and self.verify_block(chain[i]):
                 last_block = chain[i]
                 i += 1
             else:
@@ -112,7 +112,7 @@ class ProofOfAuthThread(threading.Thread):
 
             block = Block(block_number, self.node.get_block('last').hash, self.node.mempool.copy(),
                           self.node.enode,
-                          timestamp, difficulty, self.node.get_block('last').total_difficulty + difficulty, None)
+                          timestamp, difficulty, self.node.get_block('last').total_difficulty, None)
 
             self.node.chain.append(block)
             self.node.mempool.clear()

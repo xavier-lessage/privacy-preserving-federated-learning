@@ -1,4 +1,3 @@
-
 """
 Every consensus should have :
 - a genesis block
@@ -15,6 +14,7 @@ from PROJH402.src.Block import Block
 MINING_DIFFICULTY = 18  # Approx One block every 7 seconds
 GENESIS_BLOCK = Block(0, 0000000, [], 0, 0, MINING_DIFFICULTY, 0, 0)
 
+
 class ProofOfWork:
     def __init__(self):
         self.genesis = GENESIS_BLOCK
@@ -24,7 +24,8 @@ class ProofOfWork:
         last_block = chain[0]
         i = 1
         while i < len(chain):
-            if chain[i].parent_hash == last_block.compute_block_hash() and self.verify_block(chain[i]):
+            last_block_hash = last_block.compute_block_hash()
+            if chain[i].parent_hash == last_block_hash and self.verify_block(chain[i]):
                 last_block = chain[i]
                 i += 1
             else:
@@ -35,7 +36,7 @@ class ProofOfWork:
 
     def verify_block(self, block):
         # for transaction in block.data:
-            # verify_transaction(transaction)
+        # verify_transaction(transaction)
 
         target_string = '1' * (256 - block.difficulty)
         target_string = target_string.zfill(256)
@@ -75,7 +76,7 @@ class MiningThread(threading.Thread):
 
         while not self.flag.is_set():
             last_block = self.node.get_block("last")
-            block.update(last_block.height+1, last_block.hash, last_block.data, self.difficulty,
+            block.update(last_block.height + 1, last_block.hash, last_block.data, self.difficulty,
                          last_block.total_difficulty + self.difficulty)
 
             target_string = '1' * (256 - self.difficulty)
@@ -101,6 +102,3 @@ class MiningThread(threading.Thread):
 
     def stop(self):
         self.flag.set()
-
-
-

@@ -27,27 +27,29 @@ class ProofOfAuthority:
 
     def verify_chain(self, chain):
         last_block = chain[0]
+        if not self.verify_block(last_block):
+            return False
         i = 1
         stack = 0
         while i < len(chain):
-            if chain[i].timestamp - last_block >= BLOCK_PERIOD and self.verify_block(chain[i]):
+            last_block_hash = last_block.compute_block_hash()
+            if chain[i].timestamp - last_block.timestamp < BLOCK_PERIOD and self.verify_block(chain[i]) and chain[i].parent_hash == last_block_hash:
                 last_block = chain[i]
-                i += 1
             else:
                 print("Error in the blockchain")
                 print(chain)
                 return False
 
-            if chain[i].miner_id == last_block.miner_id:
-                stack += 1
-            else:
-                stack = 0
+            # if chain[i].miner_id == last_block.miner_id:
+            #     stack += 1
+            # else:
+            #     stack = 0
 
-            if stack >= SIGNER_LIMIT:
-                print("Error in the blockchain")
-                print(chain)
-                return False
-
+            # if stack >= SIGNER_LIMIT:
+            #     print("Signer limit reached")
+            #     print(chain)
+            #     return False
+            i += 1
         return True
 
     def verify_block(self, block):
@@ -94,7 +96,6 @@ class ProofOfAuthThread(threading.Thread):
 
     def run(self):
         while not self.flag.is_set():
-            sleep(self.period)
             timestamp = time()
 
             block_number = len(self.node.chain)
@@ -120,6 +121,8 @@ class ProofOfAuthThread(threading.Thread):
             if constants.DEBUG:
                 print("Block added: " + str(block.compute_block_hash()))
                 print(repr(block) + "\n")
+
+            sleep(self.period)
 
     def stop(self):
         self.flag.set()

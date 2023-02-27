@@ -20,6 +20,8 @@ class Node:
         self.chain = []
         self.mempool = set()
 
+        self.previous_transactions_id = set()
+
         self.host = host
         self.port = port
 
@@ -68,6 +70,10 @@ class Node:
         self.data_handler.stop()
         self.syncing = False
 
+    def destroy(self):
+        self.stop_tcp()
+        self.stop_mining()
+
     def get_block(self, height):
         if height == 'last':
             return self.chain[-1]
@@ -76,9 +82,10 @@ class Node:
         else:
             return self.chain[height]
 
-    def sync_mempool(self, mempool):
-        for elem in mempool:
-            self.mempool.add(elem)
+    def sync_mempool(self, transactions):
+        for elem in transactions:
+            if elem.nonce not in self.previous_transactions_id:
+                self.mempool.add(elem)
 
     def sync_chain(self, chain_repr, height):
         print("Merging chains")
@@ -89,13 +96,23 @@ class Node:
             chain.append(block)
 
         if not self.verify_chain(chain):
+            print(self.verify_chain(chain))
+            print(chain)
             return
 
-        for block in chain:
-            for transaction in block.data:
-                self.mempool.discard(transaction)
-
         if chain[0].parent_hash == self.get_block(height).hash:
+            # update mempool
+            for block in chain:
+                for transaction in block.data:
+                    self.mempool.discard(transaction)
+                    self.previous_transactions_id.add(transaction.nonce)
+
+            # retrieving possible missed transactions
+            for block in chain[height+1:]:
+                for transaction in block.data:
+                    if transaction.nonce not in self.previous_transactions_id:
+                        self.mempool.add(transaction)
+
             # Replace self chain with the other chain
             del self.chain[height+1:]
             self.chain.extend(chain)
@@ -134,7 +151,4 @@ class Node:
         return info
 
     def verify_chain(self, chain):
-        """
-        Checks every block of the chain to see if the previous_hash matches the hash of the previous block
-        """
-        self.consensus.verify_chain(chain)
+        return self.consensus.verify_chain(chain)

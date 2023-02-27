@@ -4,10 +4,9 @@ from time import time, sleep
 
 # from PROJH402.src.Block import Block
 from PROJH402.src.Block import Block, create_block_from_list
-from PROJH402.src.MiningThreads import MiningThread
 from PROJH402.src.NodeThread import NodeThread
 from PROJH402.src.Pingers import ChainPinger, MemPoolPinger
-from PROJH402.src.constants import ENCODING, CHAIN_SYNC_INTERVAL, MEMPOOL_SYNC_INTERVAL, GENESIS_BLOCK
+from PROJH402.src.constants import ENCODING, CHAIN_SYNC_INTERVAL, MEMPOOL_SYNC_INTERVAL
 from PROJH402.src.utils import compute_hash, verify_chain
 
 
@@ -16,20 +15,21 @@ class Node:
     Class representing a 'user' that has his id, his blockchain and his mem-pool
     """
 
-    def __init__(self, id, host, port, difficulty):
+    def __init__(self, id, host, port, consensus):
         self.id = id
         self.chain = []
         self.mempool = set()
-        self.difficulty = difficulty
+
+        self.previous_transactions_id = set()
 
         self.host = host
         self.port = port
 
         self.enode = f"enode://{self.id}@{self.host}:{self.port}"
 
+        self.consensus = consensus
         # Initialize the genesis Block
-        genesis_block = GENESIS_BLOCK
-        self.chain.append(genesis_block)
+        self.chain.append(self.consensus.genesis)
 
         # {enode: node_info}
         self.peers = {}
@@ -42,7 +42,7 @@ class Node:
         self.data_handler = self.node_thread.data_handler
 
         self.mining = False
-        self.mining_thread = MiningThread(self)
+        self.mining_thread = consensus.block_generation(self)
 
     def start_mining(self):
         print("Starting the mining \n")
@@ -70,6 +70,10 @@ class Node:
         self.data_handler.stop()
         self.syncing = False
 
+    def destroy(self):
+        self.stop_tcp()
+        self.stop_mining()
+
     def get_block(self, height):
         if height == 'last':
             return self.chain[-1]
@@ -78,9 +82,10 @@ class Node:
         else:
             return self.chain[height]
 
-    def sync_mempool(self, mempool):
-        for elem in mempool:
-            self.mempool.add(elem)
+    def sync_mempool(self, transactions):
+        for elem in transactions:
+            if elem.nonce not in self.previous_transactions_id:
+                self.mempool.add(elem)
 
     def sync_chain(self, chain_repr, height):
         print("Merging chains")
@@ -90,14 +95,24 @@ class Node:
             block = create_block_from_list(block_repr)
             chain.append(block)
 
-        if not verify_chain(chain):
+        if not self.verify_chain(chain):
+            print(self.verify_chain(chain))
+            print(chain)
             return
 
-        for block in chain:
-            for transaction in block.data:
-                self.mempool.discard(transaction)
-
         if chain[0].parent_hash == self.get_block(height).hash:
+            # update mempool
+            for block in chain:
+                for transaction in block.data:
+                    self.mempool.discard(transaction)
+                    self.previous_transactions_id.add(transaction.nonce)
+
+            # retrieving possible missed transactions
+            for block in chain[height+1:]:
+                for transaction in block.data:
+                    if transaction.nonce not in self.previous_transactions_id:
+                        self.mempool.add(transaction)
+
             # Replace self chain with the other chain
             del self.chain[height+1:]
             self.chain.extend(chain)
@@ -131,6 +146,9 @@ class Node:
         self.peers.pop(enode, None)
 
     def node_info(self):
-        protocol = {"difficulty": self.difficulty}
+        protocol = {"consensus": self.consensus}
         info = {"enode": self.enode, "id": self.id, "ip": self.host, "port": self.port, "protocol": protocol}
         return info
+
+    def verify_chain(self, chain):
+        return self.consensus.verify_chain(chain)

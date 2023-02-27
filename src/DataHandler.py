@@ -52,7 +52,7 @@ class DataHandler:
         msg_type = msg["type"]
 
         if msg_type == "mempool_sync":
-            self.node.mempool.update(msg["data"])
+            self.update_mempool(msg["data"])
         if msg_type == "chain_sync":
             self.handle_chain_sync(msg)
         if msg_type == "block":
@@ -126,7 +126,7 @@ class DataHandler:
             print(f"common block found in node {self.node.id}")
             partial_chain = []
             i = height + 1
-            print(self.node.chain)
+            # print(self.node.chain)
             while i < len(self.node.chain):
                 partial_chain.append(block_to_list(self.node.get_block(i)))
                 i += 1
@@ -147,8 +147,8 @@ class DataHandler:
         self.pending_block_request.pop(message["sender"])
         self.node.sync_chain(message["data"], height)
 
-
-
+    def update_mempool(self, transactions):
+        self.node.sync_mempool(transactions)
 
 
 

@@ -1,39 +1,47 @@
-from time import sleep
+import multiprocessing
+import os
+import sys
+from time import sleep, time
 
-from PROJH402.src.Block import Block, create_block_from_list, block_to_list
-from PROJH402.src.ProofOfAuth import ProofOfAuthority
-from PROJH402.src.ProofOfWork import ProofOfWork
+
+sys.path.append("/home/ubuntu/Documents/toychain-argos/PROJH402")
+
 from PROJH402.src.Node import Node
+from PROJH402.src.ProofOfAuth import ProofOfAuthority
 from PROJH402.src.Transaction import Transaction
 from PROJH402.src.constants import LOCALHOST
-from PROJH402.src.utils import compute_hash, verify_chain
+
 
 # consensus = ProofOfWork()
 consensus = ProofOfAuthority()
-node0 = Node(0, LOCALHOST, 1234, consensus)
-node1 = Node(1, LOCALHOST, 1235, consensus)
-node2 = Node(2, LOCALHOST, 1236, consensus)
+node1 = Node(1, LOCALHOST, 1234, consensus)
+node2 = Node(2, LOCALHOST, 1235, consensus)
+node3 = Node(3, LOCALHOST, 1236, consensus)
 
 
 def f():
-    trans = Transaction("U", "D", "Hello")
-    node0.mempool.add(trans)
-    node0.start_tcp()
+    # trans = Transaction("U", "D", "Hello")
+    # node3.mempool.add(trans)
+    print(time())
+    node3.start_tcp()
     node1.start_tcp()
     node2.start_tcp()
+    print(time())
 
-    node0.start_mining()
+    node3.start_mining()
     node1.start_mining()
     node2.start_mining()
 
-    sleep(4)
-    
-    node0.add_peer(node1.enode)
-    node0.add_peer(node2.enode)
-
+    print(time())
+    node3.add_peer(node1.enode)
+    node3.add_peer(node2.enode)
+    print(f"Finished adding peers {time()}")
     sleep(35)
-    print(node0.chain)
+    print(node3.chain)
 
+def g():
+    print("Destroying now")
+    node1.destroy()
 
 if __name__ == '__main__':
-    f()
+    g()

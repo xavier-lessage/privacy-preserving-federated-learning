@@ -6,7 +6,7 @@ from time import time, sleep
 from PROJH402.src.Block import Block, create_block_from_list
 from PROJH402.src.NodeThread import NodeThread
 from PROJH402.src.Pingers import ChainPinger, MemPoolPinger
-from PROJH402.src.constants import ENCODING, CHAIN_SYNC_INTERVAL, MEMPOOL_SYNC_INTERVAL
+from PROJH402.src.constants import ENCODING, CHAIN_SYNC_INTERVAL, MEMPOOL_SYNC_INTERVAL, DEBUG
 from PROJH402.src.utils import compute_hash, verify_chain
 
 
@@ -71,6 +71,7 @@ class Node:
         self.syncing = False
 
     def destroy(self):
+        print("Destroyed")
         self.stop_tcp()
         self.stop_mining()
 
@@ -96,8 +97,6 @@ class Node:
             chain.append(block)
 
         if not self.verify_chain(chain):
-            print(self.verify_chain(chain))
-            print(chain)
             return
 
         if chain[0].parent_hash == self.get_block(height).hash:
@@ -117,7 +116,8 @@ class Node:
             del self.chain[height+1:]
             self.chain.extend(chain)
             print(f"Node {self.id} has updated its chain")
-            print(self.chain)
+            if DEBUG:
+                print(self.chain)
         else:
             print("Chain does not fit here")
 
@@ -147,7 +147,8 @@ class Node:
 
     def node_info(self):
         protocol = {"consensus": self.consensus}
-        info = {"enode": self.enode, "id": self.id, "ip": self.host, "port": self.port, "protocol": protocol}
+        #info = {"enode": self.enode, "id": self.id, "ip": self.host, "port": self.port, "protocol": protocol}
+        info = {"enode": self.enode, "id": self.id, "ip": self.host, "port": self.port}
         return info
 
     def verify_chain(self, chain):

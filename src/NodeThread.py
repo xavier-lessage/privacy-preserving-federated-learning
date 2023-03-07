@@ -32,16 +32,22 @@ class NodeThread(threading.Thread):
         self.connection_threads = {}
         self.disconnections = Queue()
 
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        #self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        #self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         print("Node " + str(self.id) + " starting on port " + str(self.port))
-        self.sock.bind((self.host, self.port))
-        self.sock.settimeout(1.0)
-        self.sock.listen(1)
+        #self.sock.bind((self.host, self.port))
+        #self.sock.settimeout(1.0)
+        #self.sock.listen(1)
 
     def run(self):
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.sock.bind((self.host, self.port))
+
         while not self.terminate_flag.is_set():
             try:
+                self.sock.settimeout(5)
+                self.sock.listen(1)
                 client_sock, client_address = self.sock.accept()
                 self.handle_connection(client_sock)
 
@@ -60,6 +66,7 @@ class NodeThread(threading.Thread):
         for connection in self.connection_threads.values():
             connection.stop()
 
+        self.sock.shutdown(True)
         self.sock.close()
         print("Node " + str(self.id) + " stopped")
 

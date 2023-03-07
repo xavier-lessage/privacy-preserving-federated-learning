@@ -13,7 +13,8 @@ DIFF_NOTURN = 1
 DIFF_INTURN = 2
 SIGNER_LIMIT = 3
 GENESIS_BLOCK = Block(0, 0000000, [], 0, 0, 0, 0,
-                      ["enode://0@127.0.0.1:1234", "enode://1@127.0.0.1:1235", "enode://2@127.0.0.1:1236"])
+                      ["enode://1@127.0.0.1:1234", "enode://2@127.0.0.1:1235", "enode://3@127.0.0.1:1236"])
+
 
 
 class ProofOfAuthority:
@@ -33,7 +34,7 @@ class ProofOfAuthority:
         stack = 0
         while i < len(chain):
             last_block_hash = last_block.compute_block_hash()
-            if chain[i].timestamp - last_block.timestamp < BLOCK_PERIOD and self.verify_block(chain[i]) and chain[i].parent_hash == last_block_hash:
+            if chain[i].timestamp - last_block.timestamp >= BLOCK_PERIOD and self.verify_block(chain[i]) and chain[i].parent_hash == last_block_hash:
                 last_block = chain[i]
             else:
                 print("Error in the blockchain")

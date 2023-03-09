@@ -114,7 +114,7 @@ class NodeThread(threading.Thread):
         self.terminate_flag.set()
 
     def create_connection(self, sock, enode, message_queue):
-        return ConnectionThread(sock, self, enode, message_queue, self.disconnections)
+        return ConnectionThread(sock, self, enode, self.data_handler, self.disconnections)
 
 
 

@@ -152,4 +152,4 @@ class Node:
         return info
 
     def verify_chain(self, chain):
-        return self.consensus.verify_chain(chain)
+        return self.consensus.verify_chain(chain, self.get_block('last').state)

@@ -1,6 +1,7 @@
 import multiprocessing
 import os
 import sys
+import threading
 from time import sleep, time
 
 
@@ -20,8 +21,8 @@ node3 = Node(3, LOCALHOST, 1236, consensus)
 
 
 def f():
-    # trans = Transaction("U", "D", "Hello")
-    # node3.mempool.add(trans)
+    trans = Transaction("enode://1@127.0.0.1:1234", "enode://2@127.0.0.1:1235", "", 4)
+    node3.mempool.add(trans)
     print(time())
     node3.start_tcp()
     node1.start_tcp()
@@ -32,16 +33,15 @@ def f():
     node1.start_mining()
     node2.start_mining()
 
-    print(time())
     node3.add_peer(node1.enode)
     node3.add_peer(node2.enode)
-    print(f"Finished adding peers {time()}")
-    sleep(35)
-    print(node3.chain)
 
-def g():
-    print("Destroying now")
-    node1.destroy()
+    print(threading.activeCount())
+    # sleep(35)
+    # print(node1.get_block('last').state.balances)
+    # print(node2.get_block('last').state.balances)
+    # print(node3.get_block('last').state.balances)
+
 
 if __name__ == '__main__':
-    g()
+    f()

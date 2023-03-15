@@ -1,3 +1,4 @@
+import logging
 import pickle
 
 import socket
@@ -50,6 +51,7 @@ class ConnectionThread(threading.Thread):
 
             except Exception as e:
                 self.terminate_flag.set()
+                logging.error(data)
                 raise e
 
         self.disconnection_queue.put(self.enode)

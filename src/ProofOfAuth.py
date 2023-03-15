@@ -1,9 +1,11 @@
+import copy
+import logging
 import threading
 from random import randint
 from time import time, sleep
 
 from PROJH402.src import constants
-from PROJH402.src.Block import Block
+from PROJH402.src.Block import Block, State
 
 EPOCH_LENGTH = 3000
 BLOCK_PERIOD = 15
@@ -12,34 +14,47 @@ NONCE_DROP = 0x0000000000000000
 DIFF_NOTURN = 1
 DIFF_INTURN = 2
 SIGNER_LIMIT = 3
-GENESIS_BLOCK = Block(0, 0000000, [], 0, 0, 0, 0,
+GENESIS_BLOCK = Block(0, {"enode://1@127.0.0.1:1234": 4}, [], 0, 0, 0, 0,
                       ["enode://1@127.0.0.1:1234", "enode://2@127.0.0.1:1235", "enode://3@127.0.0.1:1236"])
-
 
 
 class ProofOfAuthority:
     def __init__(self):
         self.genesis = GENESIS_BLOCK
+        initial_state = State(GENESIS_BLOCK.parent_hash)
+        self.genesis.update_state(initial_state)
         self.block_generation = ProofOfAuthThread
         self.epoch_length = EPOCH_LENGTH
 
         self.auth_signers = GENESIS_BLOCK.nonce
         self.signer_count = len(self.auth_signers)
 
-    def verify_chain(self, chain):
+        # Boolean to check or not the block states
+        self.trust = False
+
+    def verify_chain(self, chain, previous_state):
         last_block = chain[0]
-        if not self.verify_block(last_block):
+        if not self.verify_block(last_block, previous_state):
             return False
         i = 1
         stack = 0
         while i < len(chain):
             last_block_hash = last_block.compute_block_hash()
-            if chain[i].timestamp - last_block.timestamp >= BLOCK_PERIOD and self.verify_block(chain[i]) and chain[i].parent_hash == last_block_hash:
-                last_block = chain[i]
-            else:
+
+            if chain[i].timestamp - last_block.timestamp < BLOCK_PERIOD // 2:
+                logging.error("Timestamp error in the blockchain")
+                return False
+            elif not self.verify_block(chain[i], last_block.state):
+                logging.error("Block error")
+                logging.error(chain[i].__repr__())
+                return False
+
+            elif chain[i].parent_hash != last_block_hash:
                 print("Error in the blockchain")
                 print(chain)
                 return False
+            else:
+                last_block = chain[i]
 
             # if chain[i].miner_id == last_block.miner_id:
             #     stack += 1
@@ -53,15 +68,28 @@ class ProofOfAuthority:
             i += 1
         return True
 
-    def verify_block(self, block):
+    def verify_block(self, block, previous_state):
         # for transaction in block.data:
         #   verify_transaction(transaction)
 
+        # Verify block state
+        if not self.trust:
+            s = copy.copy(previous_state)
+            for transaction in block.data:
+                s.apply_transaction(transaction)
+            if s.state_hash() != block.state.state_hash():
+                logging.error(f"Invalid state {previous_state.balances}"
+                              f"{s.balances}"
+                              f"{block.data}")
+                return False
+
+        # Verify signer
         if block.miner_id in self.auth_signers:
             signer_index = self.auth_signers.index(block.miner_id)
         else:
             return False
 
+        # Check Total Difficulty
         if block.height % self.signer_count == signer_index:
             expected_diff = DIFF_INTURN
         else:
@@ -115,6 +143,8 @@ class ProofOfAuthThread(threading.Thread):
             block = Block(block_number, self.node.get_block('last').hash, self.node.mempool.copy(),
                           self.node.enode,
                           timestamp, difficulty, self.node.get_block('last').total_difficulty, None)
+
+            block.update_state(copy.copy(self.node.get_block('last').state))
 
             self.node.chain.append(block)
             self.node.mempool.clear()

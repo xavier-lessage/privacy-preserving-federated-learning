@@ -16,6 +16,11 @@ class Block:
         self.difficulty = difficulty
         self.total_difficulty = total_diff + difficulty
 
+        self.state = State()
+        for t in data:
+            self.state.apply_transaction(t)
+        self.state_hash = self.state.state_hash()
+
         if not nonce:
             nonce = randint(0, 1000)
 
@@ -29,10 +34,10 @@ class Block:
         computes the hash of the block header
         :return: hash of the block
         """
-        list = [self.height, self.parent_hash, self.transactions_root, self.miner_id, self.timestamp, self.difficulty,
-                self.total_difficulty, self.nonce]
+        _list = [self.height, self.parent_hash, self.transactions_root, self.miner_id, self.timestamp, self.difficulty,
+                self.total_difficulty, self.nonce, self.state_hash]
 
-        self.hash = compute_hash(list)
+        self.hash = compute_hash(_list)
 
         return self.hash
 
@@ -83,6 +88,15 @@ class Block:
         self.data = data.copy()
         self.transactions_root = self.transactions_hash()
 
+    def update_state(self, state=None):
+        if state:
+            self.state = state
+        for t in self.data:
+            self.state.apply_transaction(t)
+
+        self.state_hash = self.state.state_hash()
+        self.compute_block_hash()
+
     def __repr__(self):
         """
         Translate the block object in a string object
@@ -100,20 +114,63 @@ class Block:
         self.difficulty = difficulty
         self.total_difficulty = total_difficulty
 
+        self.update_state()
+
 
 def block_to_list(block):
     return [block.height, block.parent_hash, block.data, block.miner_id, block.timestamp, block.difficulty,
-            block.total_difficulty, block.nonce]
+            block.total_difficulty, block.nonce, block.state]
 
 
-def create_block_from_list(list):
-    height = list[0]
-    parent_hash = list[1]
-    data = list[2]
-    miner_id = list[3]
-    timestamp = list[4]
-    difficulty = list[5]
-    total_difficulty = list[6] - difficulty
-    nonce = list[7]
+def create_block_from_list(_list):
+    height = _list[0]
+    parent_hash = _list[1]
+    data = _list[2]
+    miner_id = _list[3]
+    timestamp = _list[4]
+    difficulty = _list[5]
+    total_difficulty = _list[6] - difficulty
+    nonce = _list[7]
+    state = _list[8]
 
-    return Block(height, parent_hash, data, miner_id, timestamp, difficulty, total_difficulty, nonce)
+    b = Block(height, parent_hash, data, miner_id, timestamp, difficulty, total_difficulty, nonce)
+    b.update_state(state)
+    return b
+
+
+class State:
+    def __init__(self, balances=None):
+        self.n = 0
+        if balances:
+            self.balances = balances
+        else:
+            self.balances = dict()
+
+    def add_k(self, k):
+        self.n += k
+
+    def apply_transaction(self, t):
+        # Initialise account
+        if t.source not in self.balances:
+            self.balances[t.source] = 0
+
+        # Check the balance
+        if self.balances[t.source] - t.value >= 0:
+            self.balances[t.source] -= t.value
+        else:
+            return
+
+        # Make the payment
+        if t.destination not in self.balances:
+            self.balances[t.destination] = 0
+        self.balances[t.destination] += t.value
+
+        # Apply the other actions
+        if t.data.get("action"):
+            action = getattr(self, t.data.get("action"))
+            _input = t.data.get("input")
+            action(_input)
+
+    def state_hash(self):
+        return compute_hash(self.balances)
+

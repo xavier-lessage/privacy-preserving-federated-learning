@@ -18,7 +18,7 @@ class DataHandler:
         # {enode : height}
         self.pending_block_request = {}
         self.message_queue = Queue()
-        threading.Thread(target=self.handle_messages).start()
+        # threading.Thread(target=self.handle_messages).start()
 
     def stop(self):
         self.flag.set()

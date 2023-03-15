@@ -12,13 +12,13 @@ PORT = 65432
 
 
 class ConnectionThread(threading.Thread):
-    def __init__(self, sock, main_node_thread, enode, message_queue, disconnection_queue, timeout=8.0):
+    def __init__(self, sock, main_node_thread, enode, data_handler, disconnection_queue, timeout=8.0):
         super().__init__()
 
         self.node_thread = main_node_thread
         self.enode = enode
         self.sock = sock
-        self.message_queue = message_queue
+        self.data_handler = data_handler
         self.disconnection_queue = disconnection_queue
 
         self.terminate_flag = threading.Event()
@@ -38,7 +38,7 @@ class ConnectionThread(threading.Thread):
             try:
                 data = self.sock.recv(4096)
                 msg = pickle.loads(data)
-                self.message_queue.put(msg)
+                self.data_handler.handle_data(msg)
 
             except socket.timeout:
                 self.terminate_flag.set()

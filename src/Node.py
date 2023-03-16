@@ -1,3 +1,4 @@
+import logging
 import threading
 import urllib.parse
 from time import time, sleep
@@ -115,7 +116,7 @@ class Node:
             # Replace self chain with the other chain
             del self.chain[height+1:]
             self.chain.extend(chain)
-            print(f"Node {self.id} has updated its chain")
+            print(f"Node {self.id} has updated its chain, total difficulty : {self.get_block('last').total_difficulty}")
             if DEBUG:
                 print(self.chain)
         else:

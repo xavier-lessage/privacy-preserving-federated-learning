@@ -10,3 +10,5 @@ class Transaction:
         self.value = value
         self.nonce = uuid4()
 
+    def __repr__(self):
+        return f"Source : {self.source}, Dest: {self.destination}, data: {self.data} value:{self.value}, nonce: {self.nonce}"

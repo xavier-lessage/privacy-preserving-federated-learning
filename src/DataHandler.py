@@ -101,6 +101,9 @@ class DataHandler:
             # If the chain of the node is longer than the received one, let him do the work
 
             self.request_block(len(self.node.chain) - 1, message["sender"])
+        else:
+            if constants.DEBUG:
+                print(f"Node {self.node.id} has a current diff of {last_block.total_difficulty}")
 
     def request_block(self, height, enode):
         if enode in self.pending_block_request:

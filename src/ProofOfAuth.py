@@ -37,12 +37,14 @@ class ProofOfAuthority:
         if not self.verify_block(last_block, previous_state):
             return False
         i = 1
-        stack = 0
         while i < len(chain):
             last_block_hash = last_block.compute_block_hash()
 
             if chain[i].timestamp - last_block.timestamp < BLOCK_PERIOD // 2:
                 logging.error("Timestamp error in the blockchain")
+                logging.error(len(chain))
+                logging.error(f"Previous: {last_block.timestamp}, Current: {chain[i].timestamp}")
+                logging.error(chain)
                 return False
             elif not self.verify_block(chain[i], last_block.state):
                 logging.error("Block error")
@@ -50,8 +52,8 @@ class ProofOfAuthority:
                 return False
 
             elif chain[i].parent_hash != last_block_hash:
-                print("Error in the blockchain")
-                print(chain)
+                logging.error("Error in the blockchain")
+                logging.error(chain)
                 return False
             else:
                 last_block = chain[i]
@@ -78,9 +80,9 @@ class ProofOfAuthority:
             for transaction in block.data:
                 s.apply_transaction(transaction)
             if s.state_hash() != block.state.state_hash():
-                logging.error(f"Invalid state {previous_state.balances}"
-                              f"{s.balances}"
-                              f"{block.data}")
+                logging.error(f"Invalid state {previous_state.balances}")
+                logging.error(f"{s.balances}")
+                logging.error(f"{block.data}")
                 return False
 
         # Verify signer
@@ -126,12 +128,13 @@ class ProofOfAuthThread(threading.Thread):
     def run(self):
         while not self.flag.is_set():
             timestamp = time()
-
+            delay = 0
             block_number = len(self.node.chain)
             if block_number % self.signer_count == self.index:
                 difficulty = DIFF_INTURN
             else:
-                sleep(randint(0, int(self.signer_count * 0.5)))
+                delay = randint(0, int(self.signer_count))
+                sleep(delay)
                 difficulty = DIFF_NOTURN
 
             if block_number % self.node.consensus.epoch_length == 0:
@@ -146,14 +149,17 @@ class ProofOfAuthThread(threading.Thread):
 
             block.update_state(copy.copy(self.node.get_block('last').state))
 
-            self.node.chain.append(block)
-            self.node.mempool.clear()
-
-            if constants.DEBUG:
-                print("Block added: " + str(block.compute_block_hash()))
-                print(repr(block) + "\n")
-
-            sleep(self.period)
+            if block.total_difficulty > self.node.get_block('last').total_difficulty and block.height != self.node.get_block('last').height:
+                self.node.chain.append(block)
+                self.node.mempool.clear()
+                if constants.DEBUG:
+                    logging.info(f"Block produced by Node {self.node.id}: " + str(block.compute_block_hash()))
+                    logging.info(repr(block) + "\n")
+                    for t in block.data:
+                        print(repr(t))
+                    # print(f"BLOCK PRODUCED by Node {self.node.id}: " + str(block.compute_block_hash()))
+                    # print(repr(block) + "\n")
+            sleep(self.period - delay)
 
     def stop(self):
         self.flag.set()

@@ -23,9 +23,9 @@ logging.basicConfig(level=logging.INFO)
 
 
 def f():
-    logging.basicConfig(level=logging.INFO)
-    trans = Transaction("enode://1@127.0.0.1:1234", "enode://2@127.0.0.1:1235", {}, 4)
-    node3.mempool.add(trans)
+    # logging.basicConfig(level=logging.INFO)
+    # trans = Transaction("enode://1@127.0.0.1:1234", "enode://2@127.0.0.1:1235", {}, 4)
+    # node3.mempool.add(trans)
     node3.start_tcp()
     node1.start_tcp()
     node2.start_tcp()

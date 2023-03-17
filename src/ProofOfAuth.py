@@ -143,17 +143,18 @@ class ProofOfAuthThread(threading.Thread):
 
             # IMPORTANT: For the moment extraData stored in nonce and signature stored in Miner_id, to be changed
 
-            block = Block(block_number, self.node.get_block('last').hash, self.node.mempool.copy(),
-                          self.node.enode,
-                          timestamp, difficulty, self.node.get_block('last').total_difficulty, None)
+            if block_number > self.node.get_block('last').height:
+                block = Block(block_number, self.node.get_block('last').hash, self.node.mempool.copy(),
+                              self.node.enode,
+                              timestamp, difficulty, self.node.get_block('last').total_difficulty, None)
 
-            block.update_state(copy.copy(self.node.get_block('last').state))
+                block.update_state(copy.copy(self.node.get_block('last').state))
 
-            if block.total_difficulty > self.node.get_block('last').total_difficulty and block.height != self.node.get_block('last').height:
                 self.node.chain.append(block)
                 self.node.mempool.clear()
                 logging.info(f"Block produced by Node {self.node.id}: " + str(block.compute_block_hash()))
-                logging.info(repr(block) + "\n")
+                logging.info(repr(block) + str(time()) + "\n")
+
             sleep(self.period - delay)
 
     def stop(self):

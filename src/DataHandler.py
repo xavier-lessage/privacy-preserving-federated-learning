@@ -23,27 +23,12 @@ class DataHandler:
     def stop(self):
         self.flag.set()
 
-    def handle_messages(self):
-        """
-        Handle message that are put in a queue to avoid data inconsistency
-        """
-        while not self.flag.is_set():
-            try:
-                while not self.message_queue.empty():
-                    msg = self.message_queue.get()
-                    if msg:
-                        self.handle_data(msg)
-
-            except Exception as e:
-                self.node.stop_tcp()
-                raise e
-
     def handle_data(self, msg):
         """
         Choose action to do from the message information
         """
-        if constants.DEBUG:
-            print("Node " + str(self.id) + " received : " + str(msg))
+        # if constants.DEBUG:
+            # print("Node " + str(self.id) + " received : " + str(msg))
 
         if not self.check_message_validity(msg):
             print("invalid message")

@@ -108,7 +108,7 @@ class Node:
                     self.previous_transactions_id.add(transaction.nonce)
 
             # retrieving possible missed transactions
-            for block in chain[height+1:]:
+            for block in self.chain[height+1:]:
                 for transaction in block.data:
                     if transaction.nonce not in self.previous_transactions_id:
                         self.mempool.add(transaction)
@@ -117,8 +117,8 @@ class Node:
             del self.chain[height+1:]
             self.chain.extend(chain)
             print(f"Node {self.id} has updated its chain, total difficulty : {self.get_block('last').total_difficulty}")
-            if DEBUG:
-                print(self.chain)
+            for block in self.chain[-5:]:
+                print(block.__repr__())
         else:
             print("Chain does not fit here")
 

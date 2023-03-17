@@ -17,6 +17,7 @@ class Block:
         self.total_difficulty = total_diff + difficulty
 
         self.state = State()
+        # self.state = {}
         for t in data:
             self.state.apply_transaction(t)
         self.state_hash = self.state.state_hash()
@@ -102,9 +103,9 @@ class Block:
         Translate the block object in a string object
         :return: The constructor as a string
         """
-        # TODO
-        return f'["{self.height}", "{self.parent_hash}", "{self.data}", "{self.miner_id}"' \
-               f', "{self.timestamp}", "{self.difficulty}", "{self.total_difficulty}", "{self.nonce}", {self.hash}]'
+        # return f'["{self.height}", "{self.parent_hash}", "{self.data}", "{self.miner_id}"' \
+        #        f', "{self.timestamp}", "{self.difficulty}", "{self.total_difficulty}", "{self.nonce}", {self.hash}]'
+        return f"## Height: {self.height}, Diff: {self.difficulty}, Total_diff: {self.total_difficulty}, Producer: {self.miner_id} ##"
 
     def update(self, height, parent_hash, data, difficulty, total_difficulty):
         self.timestamp = time()
@@ -119,7 +120,7 @@ class Block:
 
 def block_to_list(block):
     return [block.height, block.parent_hash, block.data, block.miner_id, block.timestamp, block.difficulty,
-            block.total_difficulty, block.nonce, block.state]
+            block.total_difficulty, block.nonce, block.state.balances]
 
 
 def create_block_from_list(_list):
@@ -131,23 +132,24 @@ def create_block_from_list(_list):
     difficulty = _list[5]
     total_difficulty = _list[6] - difficulty
     nonce = _list[7]
-    state = _list[8]
+    state_balance = _list[8]
 
     b = Block(height, parent_hash, data, miner_id, timestamp, difficulty, total_difficulty, nonce)
+    state = State(state_balance)
     b.update_state(state)
     return b
 
 
 class State:
     def __init__(self, balances=None):
-        self.n = 0
         if balances:
             self.balances = balances
         else:
             self.balances = dict()
+        self.balances["n"] = 0
 
     def add_k(self, k):
-        self.n += k
+        self.balances["n"] += k
 
     def apply_transaction(self, t):
         # Initialise account

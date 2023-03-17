@@ -152,13 +152,8 @@ class ProofOfAuthThread(threading.Thread):
             if block.total_difficulty > self.node.get_block('last').total_difficulty and block.height != self.node.get_block('last').height:
                 self.node.chain.append(block)
                 self.node.mempool.clear()
-                if constants.DEBUG:
-                    logging.info(f"Block produced by Node {self.node.id}: " + str(block.compute_block_hash()))
-                    logging.info(repr(block) + "\n")
-                    for t in block.data:
-                        print(repr(t))
-                    # print(f"BLOCK PRODUCED by Node {self.node.id}: " + str(block.compute_block_hash()))
-                    # print(repr(block) + "\n")
+                logging.info(f"Block produced by Node {self.node.id}: " + str(block.compute_block_hash()))
+                logging.info(repr(block) + "\n")
             sleep(self.period - delay)
 
     def stop(self):

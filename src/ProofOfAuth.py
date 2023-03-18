@@ -129,6 +129,7 @@ class ProofOfAuthThread(threading.Thread):
         while not self.flag.is_set():
             timestamp = time()
             delay = 0
+            current_diff = self.node.get_block('last').total_difficulty
             block_number = len(self.node.chain)
             if block_number % self.signer_count == self.index:
                 difficulty = DIFF_INTURN

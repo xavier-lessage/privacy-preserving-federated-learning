@@ -46,15 +46,14 @@ class ConnectionThread(threading.Thread):
             except EOFError:
                 pass
 
-            except (ConnectionResetError, ConnectionAbortedError):
-                self.terminate_flag.set()
-
+            except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError):
+                # self.terminate_flag.set()
+                pass
             except Exception as e:
                 self.terminate_flag.set()
                 logging.error(data)
                 raise e
 
-        self.disconnection_queue.put(self.enode)
+        self.disconnection_queue.append(self.enode)
         self.sock.settimeout(None)
         self.sock.close()
-        sleep(1)

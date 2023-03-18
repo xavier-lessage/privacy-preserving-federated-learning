@@ -71,7 +71,7 @@ class Node:
         self.data_handler.stop()
         self.syncing = False
 
-    def destroy(self):
+    def destroy_node(self):
         print("Destroyed")
         self.stop_tcp()
         self.stop_mining()
@@ -138,13 +138,14 @@ class Node:
 
     def remove_peer(self, enode):
         print(f"Node {self.id} removing peer at {enode}")
+        self.peers.pop(enode, None)
         sync_threads = self.sync_threads.get(enode)
         if sync_threads:
             for thread in sync_threads:
                 thread.stop()
             self.sync_threads.pop(enode)
         self.node_thread.disconnect_from(enode)
-        self.peers.pop(enode, None)
+
 
     def node_info(self):
         protocol = {"consensus": self.consensus}

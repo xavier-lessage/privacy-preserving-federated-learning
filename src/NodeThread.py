@@ -30,7 +30,7 @@ class NodeThread(threading.Thread):
         self.terminate_flag = threading.Event()
 
         self.connection_threads = {}
-        self.disconnections = Queue()
+        self.disconnections = []
 
         #self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         #self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -59,9 +59,9 @@ class NodeThread(threading.Thread):
 
             sleep(0.01)
 
-            while not self.disconnections.empty():
-                enode = self.disconnections.get()
-                self.node.remove_peer(enode)
+            # while len(self.disconnections) > 0:
+            #     enode = self.disconnections.pop()
+            #     self.node.remove_peer(enode)
 
         for connection in self.connection_threads.values():
             connection.stop()

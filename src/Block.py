@@ -3,7 +3,7 @@ from hashlib import sha256
 from random import randint
 from time import time
 
-from PROJH402.src.utils import compute_hash, verify_transaction
+from PROJH402.src.utils import compute_hash, verify_transaction, transaction_to_dict, dict_to_transaction
 
 
 class Block:
@@ -119,14 +119,19 @@ class Block:
 
 
 def block_to_list(block):
-    return [block.height, block.parent_hash, block.data, block.miner_id, block.timestamp, block.difficulty,
+    data = []
+    for t in block.data:
+        data.append(transaction_to_dict(t))
+    return [block.height, block.parent_hash, data, block.miner_id, block.timestamp, block.difficulty,
             block.total_difficulty, block.nonce, block.state.balances]
 
 
 def create_block_from_list(_list):
     height = _list[0]
     parent_hash = _list[1]
-    data = _list[2]
+    data = []
+    for d in _list[2]:
+        data.append(dict_to_transaction(d))
     miner_id = _list[3]
     timestamp = _list[4]
     difficulty = _list[5]

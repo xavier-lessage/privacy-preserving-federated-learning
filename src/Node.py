@@ -19,7 +19,7 @@ class Node:
     def __init__(self, id, host, port, consensus):
         self.id = id
         self.chain = []
-        self.mempool = set()
+        self.mempool = {}
 
         self.previous_transactions_id = set()
 
@@ -87,7 +87,10 @@ class Node:
     def sync_mempool(self, transactions):
         for elem in transactions:
             if elem.nonce not in self.previous_transactions_id:
-                self.mempool.add(elem)
+                self.mempool[elem.nonce] = elem
+                print("?????????????????????")
+                print(f"###{elem.nonce}###")
+                print(self.previous_transactions_id)
 
     def sync_chain(self, chain_repr, height):
         print("Merging chains")
@@ -104,14 +107,16 @@ class Node:
             # update mempool
             for block in chain:
                 for transaction in block.data:
-                    self.mempool.discard(transaction)
+                    self.mempool.pop(transaction.nonce, None)
                     self.previous_transactions_id.add(transaction.nonce)
+                    logging.info(transaction.nonce)
 
             # retrieving possible missed transactions
             for block in self.chain[height+1:]:
                 for transaction in block.data:
                     if transaction.nonce not in self.previous_transactions_id:
-                        self.mempool.add(transaction)
+                        self.mempool[transaction.nonce] = transaction
+
 
             # Replace self chain with the other chain
             del self.chain[height+1:]
@@ -135,6 +140,7 @@ class Node:
             self.sync_threads[enode] = [chain_sync_thread, mempool_sync_thread]
             chain_sync_thread.start()
             mempool_sync_thread.start()
+            return True
 
     def remove_peer(self, enode):
         print(f"Node {self.id} removing peer at {enode}")

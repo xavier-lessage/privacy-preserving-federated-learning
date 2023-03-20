@@ -4,6 +4,7 @@ from queue import Queue
 
 from PROJH402.src import constants
 from PROJH402.src.Block import block_to_list
+from PROJH402.src.utils import dict_to_transaction
 
 
 class DataHandler:
@@ -136,7 +137,10 @@ class DataHandler:
         self.node.sync_chain(message["data"], height)
 
     def update_mempool(self, transactions):
-        self.node.sync_mempool(transactions)
+        _list = []
+        for d in transactions:
+            _list.append(dict_to_transaction(d))
+        self.node.sync_mempool(_list)
 
 
 

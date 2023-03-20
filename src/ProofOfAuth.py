@@ -30,7 +30,7 @@ class ProofOfAuthority:
         self.signer_count = len(self.auth_signers)
 
         # Boolean to check or not the block states
-        self.trust = False
+        self.trust = True
 
     def verify_chain(self, chain, previous_state):
         last_block = chain[0]
@@ -81,6 +81,7 @@ class ProofOfAuthority:
                 s.apply_transaction(transaction)
             if s.state_hash() != block.state.state_hash():
                 logging.error(f"Invalid state {previous_state.balances}")
+                logging.error(f"{block.state.balances}")
                 logging.error(f"{s.balances}")
                 logging.error(f"{block.data}")
                 return False
@@ -145,7 +146,8 @@ class ProofOfAuthThread(threading.Thread):
             # IMPORTANT: For the moment extraData stored in nonce and signature stored in Miner_id, to be changed
 
             if block_number > self.node.get_block('last').height:
-                block = Block(block_number, self.node.get_block('last').hash, self.node.mempool.copy(),
+                transactions = (self.node.mempool.copy()).values()
+                block = Block(block_number, self.node.get_block('last').hash, list(transactions),
                               self.node.enode,
                               timestamp, difficulty, self.node.get_block('last').total_difficulty, None)
 
@@ -154,7 +156,8 @@ class ProofOfAuthThread(threading.Thread):
                 self.node.chain.append(block)
                 self.node.mempool.clear()
                 logging.info(f"Block produced by Node {self.node.id}: " + str(block.compute_block_hash()))
-                logging.info(repr(block) + str(time()) + "\n")
+                logging.info(repr(block) + "\n")
+                logging.info(f"###{len(block.data)}###")
 
             sleep(self.period - delay)
 

@@ -134,7 +134,7 @@ class Node:
             mempool_sync_thread = MemPoolPinger(self, enode, MEMPOOL_SYNC_INTERVAL)
             self.sync_threads[enode] = [chain_sync_thread, mempool_sync_thread]
             chain_sync_thread.start()
-            # mempool_sync_thread.start()
+            mempool_sync_thread.start()
 
     def remove_peer(self, enode):
         print(f"Node {self.id} removing peer at {enode}")

@@ -36,7 +36,7 @@ class Block:
         :return: hash of the block
         """
         _list = [self.height, self.parent_hash, self.transactions_root, self.miner_id, self.timestamp, self.difficulty,
-                self.total_difficulty, self.nonce, self.state_hash]
+                self.total_difficulty, self.nonce, self.state.state_hash()]
 
         self.hash = compute_hash(_list)
 
@@ -69,11 +69,8 @@ class Block:
         """
         Prints the block information
         """
-        print("Index: ", self.height)
-        print("Hash", self.compute_block_hash())
-        print("Nonce: ", self.nonce)
-        print("Previous: ", self.parent_hash)
-        print("data: ", self.data)
+        return f'["{self.height}", "{self.parent_hash}", "{self.miner_id}", "{self.state.balances}"' \
+               f', "{self.timestamp}", "{self.difficulty}", "{self.total_difficulty}", "{self.nonce}", {self.hash}]'
 
     def get_header_hash(self):
         header = [self.parent_hash, self.transactions_root, self.timestamp, self.difficulty, self.nonce]

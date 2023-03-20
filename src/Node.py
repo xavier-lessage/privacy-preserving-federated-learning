@@ -88,9 +88,9 @@ class Node:
         for elem in transactions:
             if elem.nonce not in self.previous_transactions_id:
                 self.mempool[elem.nonce] = elem
-                print("?????????????????????")
-                print(f"###{elem.nonce}###")
-                print(self.previous_transactions_id)
+                # print("?????????????????????")
+                # print(f"###{self.mempool}###")
+                # print(self.previous_transactions_id)
 
     def sync_chain(self, chain_repr, height):
         print("Merging chains")

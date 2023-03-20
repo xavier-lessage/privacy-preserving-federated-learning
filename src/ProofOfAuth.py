@@ -14,7 +14,7 @@ NONCE_DROP = 0x0000000000000000
 DIFF_NOTURN = 1
 DIFF_INTURN = 2
 SIGNER_LIMIT = 3
-GENESIS_BLOCK = Block(0, {"enode://1@127.0.0.1:1234": 4}, [], 0, 0, 0, 0,
+GENESIS_BLOCK = Block(0, {"enode://1@127.0.0.1:1234": 4, "enode://2@127.0.0.1:1235": 0}, [], 0, 0, 0, 0,
                       ["enode://1@127.0.0.1:1234", "enode://2@127.0.0.1:1235", "enode://3@127.0.0.1:1236"])
 
 
@@ -30,7 +30,7 @@ class ProofOfAuthority:
         self.signer_count = len(self.auth_signers)
 
         # Boolean to check or not the block states
-        self.trust = True
+        self.trust = False
 
     def verify_chain(self, chain, previous_state):
         last_block = chain[0]
@@ -53,7 +53,9 @@ class ProofOfAuthority:
 
             elif chain[i].parent_hash != last_block_hash:
                 logging.error("Error in the blockchain")
-                logging.error(chain)
+                logging.error(chain[i].parent_hash + "###" + last_block_hash)
+                for b in chain:
+                    logging.error(b.print_header())
                 return False
             else:
                 last_block = chain[i]
@@ -135,7 +137,7 @@ class ProofOfAuthThread(threading.Thread):
             if block_number % self.signer_count == self.index:
                 difficulty = DIFF_INTURN
             else:
-                delay = randint(0, int(self.signer_count))
+                delay = randint(1, int(self.signer_count))
                 sleep(delay)
                 difficulty = DIFF_NOTURN
 
@@ -147,7 +149,7 @@ class ProofOfAuthThread(threading.Thread):
 
             if block_number > self.node.get_block('last').height:
                 transactions = (self.node.mempool.copy()).values()
-                block = Block(block_number, self.node.get_block('last').hash, list(transactions),
+                block = Block(block_number, self.node.get_block('last').compute_block_hash(), list(transactions),
                               self.node.enode,
                               timestamp, difficulty, self.node.get_block('last').total_difficulty, None)
 
@@ -158,6 +160,8 @@ class ProofOfAuthThread(threading.Thread):
                 logging.info(f"Block produced by Node {self.node.id}: " + str(block.compute_block_hash()))
                 logging.info(repr(block) + "\n")
                 logging.info(f"###{len(block.data)}###")
+                logging.info(f"###{block.state.balances}###")
+
 
             sleep(self.period - delay)
 

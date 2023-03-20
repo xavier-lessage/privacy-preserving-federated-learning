@@ -22,8 +22,7 @@ class ChainPinger(threading.Thread):
                 sleep(self.timeout)
 
             except (ConnectionAbortedError, BrokenPipeError):
-                self.flag.set()
-
+                pass
             except Exception as e:
                 self.flag.set()
                 raise e
@@ -53,7 +52,6 @@ class MemPoolPinger(threading.Thread):
                 sleep(self.interval)
 
             except (ConnectionAbortedError, BrokenPipeError):
-                # self.flag.set()
                 pass
             except Exception as e:
                 self.flag.set()

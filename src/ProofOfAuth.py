@@ -134,7 +134,7 @@ class ProofOfAuthThread(threading.Thread):
             if block_number % self.signer_count == self.index:
                 difficulty = DIFF_INTURN
             else:
-                delay = randint(0, int(self.signer_count))
+                delay = randint(self.period//10, self.period//3)
                 sleep(delay)
                 difficulty = DIFF_NOTURN
 
@@ -144,7 +144,7 @@ class ProofOfAuthThread(threading.Thread):
 
             # IMPORTANT: For the moment extraData stored in nonce and signature stored in Miner_id, to be changed
 
-            if block_number > self.node.get_block('last').height:
+            if block_number > self.node.get_block('last').height and timestamp > (self.node.get_block('last').timestamp + self.period - 1):
                 block = Block(block_number, self.node.get_block('last').hash, self.node.mempool.copy(),
                               self.node.enode,
                               timestamp, difficulty, self.node.get_block('last').total_difficulty, None)
@@ -152,6 +152,7 @@ class ProofOfAuthThread(threading.Thread):
                 block.update_state(copy.copy(self.node.get_block('last').state))
 
                 self.node.chain.append(block)
+                self.node.broadcast_block(block)
                 self.node.mempool.clear()
                 logging.info(f"Block produced by Node {self.node.id}: " + str(block.compute_block_hash()))
                 logging.info(repr(block) + str(time()) + "\n")

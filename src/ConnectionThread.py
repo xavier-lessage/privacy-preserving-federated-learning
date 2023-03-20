@@ -47,7 +47,6 @@ class ConnectionThread(threading.Thread):
                 pass
 
             except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError):
-                # self.terminate_flag.set()
                 pass
             except Exception as e:
                 self.terminate_flag.set()

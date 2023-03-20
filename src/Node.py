@@ -155,3 +155,9 @@ class Node:
 
     def verify_chain(self, chain):
         return self.consensus.verify_chain(chain, self.get_block('last').state)
+
+    def broadcast_block(self, block):
+        last_block = self.get_block('last')
+        content = (last_block.get_header_hash(), last_block.total_difficulty)
+        for p in self.peers:
+            self.data_handler.send_message_to(p, content, "chain_sync")

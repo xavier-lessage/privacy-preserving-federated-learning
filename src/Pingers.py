@@ -30,7 +30,7 @@ class ChainPinger(threading.Thread):
                 self.flag.set()
                 raise e
 
-        print(f"PINGER ENDING IN NODE {self.node.id}")
+        # print(f"PINGER ENDING IN NODE {self.node.id}")
 
     def stop(self):
         self.flag.set()
@@ -49,9 +49,7 @@ class MemPoolPinger(threading.Thread):
 
     def run(self):
         while not self.flag.is_set():
-            content = []
-            for t in self.node.mempool.values():
-                content.append(transaction_to_dict(t))
+            content = self.node.mempool
             try:
                 self.data_handler.send_message_to(self.dest_enode, content, "mempool_sync")
                 sleep(self.interval)
@@ -63,8 +61,6 @@ class MemPoolPinger(threading.Thread):
             except Exception as e:
                 self.flag.set()
                 raise e
-
-        print(f"MEMPOOL SYNC stopped in {self.node.id}")
 
     def stop(self):
         self.flag.set()

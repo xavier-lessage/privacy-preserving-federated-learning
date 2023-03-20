@@ -28,8 +28,8 @@ class DataHandler:
         """
         Choose action to do from the message information
         """
-        # if constants.DEBUG:
-            # print("Node " + str(self.id) + " received : " + str(msg))
+        if constants.DEBUG:
+            print("Node " + str(self.id) + " received : " + str(msg))
 
         if not self.check_message_validity(msg):
             print("invalid message")

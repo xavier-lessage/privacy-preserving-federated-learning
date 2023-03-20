@@ -83,7 +83,6 @@ class ProofOfAuthority:
                 s.apply_transaction(transaction)
             if s.state_hash() != block.state.state_hash():
                 logging.error(f"Invalid state {previous_state.balances}")
-                logging.error(f"{block.state.balances}")
                 logging.error(f"{s.balances}")
                 logging.error(f"{block.data}")
                 return False
@@ -137,7 +136,7 @@ class ProofOfAuthThread(threading.Thread):
             if block_number % self.signer_count == self.index:
                 difficulty = DIFF_INTURN
             else:
-                delay = randint(1, int(self.signer_count))
+                delay = randint(self.period//10, self.period//3)
                 sleep(delay)
                 difficulty = DIFF_NOTURN
 
@@ -147,15 +146,15 @@ class ProofOfAuthThread(threading.Thread):
 
             # IMPORTANT: For the moment extraData stored in nonce and signature stored in Miner_id, to be changed
 
-            if block_number > self.node.get_block('last').height:
-                transactions = (self.node.mempool.copy()).values()
-                block = Block(block_number, self.node.get_block('last').compute_block_hash(), list(transactions),
+            if block_number > self.node.get_block('last').height and timestamp > (self.node.get_block('last').timestamp + self.period - 1):
+                block = Block(block_number, self.node.get_block('last').hash, self.node.mempool.copy(),
                               self.node.enode,
                               timestamp, difficulty, self.node.get_block('last').total_difficulty, None)
 
                 block.update_state(copy.copy(self.node.get_block('last').state))
 
                 self.node.chain.append(block)
+                self.node.broadcast_block(block)
                 self.node.mempool.clear()
                 logging.info(f"Block produced by Node {self.node.id}: " + str(block.compute_block_hash()))
                 logging.info(repr(block) + "\n")

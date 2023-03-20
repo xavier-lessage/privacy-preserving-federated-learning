@@ -22,13 +22,14 @@ class ChainPinger(threading.Thread):
                 sleep(self.timeout)
 
             except (ConnectionAbortedError, BrokenPipeError):
-                self.flag.set()
-
+                print("ERRRRRROR")
+                # self.flag.set()
+                pass
             except Exception as e:
                 self.flag.set()
                 raise e
 
-        # print(f"PINGER ENDING IN NODE {self.node.id}")
+        print(f"PINGER ENDING IN NODE {self.node.id}")
 
     def stop(self):
         self.flag.set()
@@ -54,10 +55,12 @@ class MemPoolPinger(threading.Thread):
 
             except (ConnectionAbortedError, BrokenPipeError):
                 # self.flag.set()
+                print("ERRRRRROR")
                 pass
             except Exception as e:
                 self.flag.set()
                 raise e
+        print(f"PINGER ENDING IN NODE {self.node.id}")
 
     def stop(self):
         self.flag.set()

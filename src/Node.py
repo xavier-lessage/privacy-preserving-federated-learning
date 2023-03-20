@@ -134,7 +134,7 @@ class Node:
             mempool_sync_thread = MemPoolPinger(self, enode, MEMPOOL_SYNC_INTERVAL)
             self.sync_threads[enode] = [chain_sync_thread, mempool_sync_thread]
             chain_sync_thread.start()
-            mempool_sync_thread.start()
+            # mempool_sync_thread.start()
 
     def remove_peer(self, enode):
         print(f"Node {self.id} removing peer at {enode}")
@@ -155,3 +155,9 @@ class Node:
 
     def verify_chain(self, chain):
         return self.consensus.verify_chain(chain, self.get_block('last').state)
+
+    def broadcast_block(self, block):
+        last_block = self.get_block('last')
+        content = (last_block.get_header_hash(), last_block.total_difficulty)
+        for p in self.peers:
+            self.data_handler.send_message_to(p, content, "chain_sync")

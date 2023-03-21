@@ -116,6 +116,7 @@ class Node:
             # Replace self chain with the other chain
             del self.chain[height+1:]
             self.chain.extend(chain)
+            self.broadcast_last_block()
             print(f"Node {self.id} has updated its chain, total difficulty : {self.get_block('last').total_difficulty}")
             for block in self.chain[-5:]:
                 print(block.__repr__())
@@ -156,7 +157,7 @@ class Node:
     def verify_chain(self, chain):
         return self.consensus.verify_chain(chain, self.get_block('last').state)
 
-    def broadcast_block(self, block):
+    def broadcast_last_block(self):
         last_block = self.get_block('last')
         content = (last_block.get_header_hash(), last_block.total_difficulty)
         for p in self.peers:

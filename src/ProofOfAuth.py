@@ -152,7 +152,7 @@ class ProofOfAuthThread(threading.Thread):
                 block.update_state(copy.copy(self.node.get_block('last').state))
 
                 self.node.chain.append(block)
-                self.node.broadcast_block(block)
+                self.node.broadcast_last_block()
                 self.node.mempool.clear()
                 logging.info(f"Block produced by Node {self.node.id}: " + str(block.compute_block_hash()))
                 logging.info(repr(block) + str(time()) + "\n")

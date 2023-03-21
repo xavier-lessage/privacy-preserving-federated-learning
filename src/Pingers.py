@@ -49,7 +49,10 @@ class MemPoolPinger(threading.Thread):
 
     def run(self):
         while not self.flag.is_set():
-            content = self.node.mempool
+            transaction_list = self.node.mempool.values()
+            content = []
+            for t in transaction_list:
+                content.append(transaction_to_dict(t))
             try:
                 self.data_handler.send_message_to(self.dest_enode, content, "mempool_sync")
                 sleep(self.interval)

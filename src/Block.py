@@ -7,7 +7,7 @@ from PROJH402.src.utils import compute_hash, verify_transaction, transaction_to_
 
 
 class Block:
-    def __init__(self, height, parent_hash, data, miner_id, timestamp, difficulty, total_diff, nonce=None):
+    def __init__(self, height, parent_hash, data, miner_id, timestamp, difficulty, total_diff, nonce=None, balances=None):
         self.height = height
         self.parent_hash = parent_hash
         self.data = data
@@ -16,11 +16,8 @@ class Block:
         self.difficulty = difficulty
         self.total_difficulty = total_diff + difficulty
 
-        self.state = State()
+        self.state = State(balances)
         # self.state = {}
-        for t in data:
-            self.state.apply_transaction(t)
-        self.state_hash = self.state.state_hash()
 
         if not nonce:
             nonce = randint(0, 1000)
@@ -47,7 +44,8 @@ class Block:
         computes the hash of the block transactions
         :return: the hash of the transactions
         """
-        self.transactions_root = compute_hash([self.data])
+        transaction_list = [transaction_to_dict(t) for t in self.data]
+        self.transactions_root = compute_hash(transaction_list)
         return self.transactions_root
 
     def verify(self):
@@ -136,9 +134,9 @@ def create_block_from_list(_list):
     nonce = _list[7]
     state_balance = _list[8]
 
-    b = Block(height, parent_hash, data, miner_id, timestamp, difficulty, total_difficulty, nonce)
-    state = State(state_balance)
-    b.update_state(state)
+    b = Block(height, parent_hash, data, miner_id, timestamp, difficulty, total_difficulty, nonce, state_balance)
+    # state = State(state_balance)
+    # b.state.balances = state_balance
     return b
 
 
@@ -148,7 +146,7 @@ class State:
             self.balances = balances
         else:
             self.balances = dict()
-        self.balances["n"] = 0
+            self.balances["n"] = 0
 
     def add_k(self, k):
         self.balances["n"] += k

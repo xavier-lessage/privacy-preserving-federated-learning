@@ -41,10 +41,12 @@ class DataHandler:
             self.update_mempool(msg["data"])
         if msg_type == "chain_sync":
             self.handle_chain_sync(msg)
+            # print("Node " + str(self.id) + " received : " + str(msg))
         if msg_type == "block":
             self.handle_block(msg)
         if msg_type == "chain":
             self.handle_partial_chain(msg)
+            # print("Node " + str(self.id) + " received : " + str(msg))
 
     def check_message_validity(self, message):
         mandatory_keys = ["data", "type", "receiver", "sender"]
@@ -85,7 +87,6 @@ class DataHandler:
         if last_block.total_difficulty < message["data"][1]:
             # If the chains have equal sizes, node keeps his
             # If the chain of the node is longer than the received one, let him do the work
-
             self.request_block(len(self.node.chain) - 1, message["sender"])
         else:
             if constants.DEBUG:
@@ -95,10 +96,12 @@ class DataHandler:
         if enode in self.pending_block_request:
             if self.pending_block_request[enode] < height:
                 # Currently in a process to find the common block
+                print("Currently in a process to find the common block")
                 return
         block = self.node.get_block(height)
         content = (block.get_header_hash(), block.total_difficulty, height)
         self.send_message_to(enode, content, "block")
+        # print(f"{self.node.id} Sending request")
         self.pending_block_request[enode] = height
 
     def handle_block(self, message):
@@ -133,7 +136,7 @@ class DataHandler:
             # Try again with chain[height-1]
             self.request_block(height-1, message["sender"])
             return
-        self.pending_block_request.pop(message["sender"])
+        self.pending_block_request.pop(message["sender"], None)
         self.node.sync_chain(message["data"], height)
 
     def update_mempool(self, transactions):

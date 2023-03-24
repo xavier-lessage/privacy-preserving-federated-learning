@@ -136,8 +136,9 @@ class DataHandler:
             # Try again with chain[height-1]
             self.request_block(height-1, message["sender"])
             return
-        self.pending_block_request.pop(message["sender"], None)
-        self.node.sync_chain(message["data"], height)
+        val = self.pending_block_request.pop(message["sender"], None)
+        if val is not None:
+            self.node.sync_chain(message["data"], height)
 
     def update_mempool(self, transactions):
         _list = []

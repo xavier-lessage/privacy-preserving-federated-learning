@@ -124,7 +124,7 @@ class Node:
             self.broadcast_last_block()
             print(f"Node {self.id} has updated its chain, total difficulty : {self.get_block('last').total_difficulty}, n = {chain[-1].state.balances.get('n')}")
             for block in self.chain[-5:]:
-                print(f"{block.__repr__()}   {block.state.balances}")
+                print(f"{block.__repr__()}   ##{len(block.data)} ##  {block.state.balances}")
         else:
             print("Chain does not fit here")
 

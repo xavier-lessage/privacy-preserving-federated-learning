@@ -5,6 +5,7 @@ import sys
 import threading
 from time import sleep, time
 
+from PROJH402.src.Block import State, Block, block_to_list, create_block_from_list
 
 sys.path.append("/home/ubuntu/Documents/toychain-argos/PROJH402")
 
@@ -41,6 +42,15 @@ def f():
     # print(node1.get_block('last').state.balances)
     # print(node2.get_block('last').state.balances)
     # print(node3.get_block('last').state.balances)
+
+def g():
+    s = State({"enode://1@127.0.0.1:1234": 4, "n": 3})
+    trans = Transaction("enode://1@127.0.0.1:1234", "enode://2@127.0.0.1:1235", {"action": "add_k", "input": 1}, 0)
+    b = Block(1, 0000, [trans], 3, 0, 0, 0, balances=s.balances)
+    b.update_state(s)
+    l = block_to_list(b)
+    b = create_block_from_list(l)
+    print(b.state.balances)
 
 
 if __name__ == '__main__':

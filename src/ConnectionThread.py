@@ -28,7 +28,10 @@ class ConnectionThread(threading.Thread):
 
     def send(self, data):
         # self.sock.sendall(data.encode("utf-8"))
-        self.sock.sendall(data)
+        try:
+            self.sock.sendall(data)
+        except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError):
+            self.terminate_flag.set()
 
     def stop(self):
         self.terminate_flag.set()

@@ -59,8 +59,8 @@ class NodeThread(threading.Thread):
 
             sleep(0.01)
 
-            # while len(self.disconnections) > 0:
-            #     enode = self.disconnections.pop()
+            while len(self.disconnections) > 0:
+                enode = self.disconnections.pop()
             #     self.node.remove_peer(enode)
 
         for connection in self.connection_threads.values():

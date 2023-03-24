@@ -1,3 +1,4 @@
+import copy
 import logging
 import threading
 import urllib.parse
@@ -166,5 +167,6 @@ class Node:
     def broadcast_last_block(self):
         last_block = self.get_block('last')
         content = (last_block.get_header_hash(), last_block.total_difficulty)
+        peer_list = copy.copy(self.peers)
         for p in self.peers:
             self.data_handler.send_message_to(p, content, "chain_sync")

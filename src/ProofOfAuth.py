@@ -78,7 +78,7 @@ class ProofOfAuthority:
 
         # Verify block state
         if not self.trust:
-            s = copy.copy(previous_state)
+            s = copy.deepcopy(previous_state)
             for transaction in block.data:
                 s.apply_transaction(transaction)
             if s.state_hash() != block.state.state_hash():

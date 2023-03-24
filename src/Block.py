@@ -1,3 +1,4 @@
+import copy
 import uuid
 from hashlib import sha256
 from random import randint
@@ -86,7 +87,7 @@ class Block:
 
     def update_state(self, state=None):
         if state:
-            self.state = state
+            self.state = copy.deepcopy(state)
         for t in self.data:
             self.state.apply_transaction(t)
 

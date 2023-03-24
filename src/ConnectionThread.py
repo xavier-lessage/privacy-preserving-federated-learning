@@ -36,16 +36,6 @@ class ConnectionThread(threading.Thread):
     def run(self):
         while not self.terminate_flag.is_set():
             try:
-                # data = []
-                # while True:
-                #     print("Entering loop")
-                #     packet = self.sock.recv(1024)
-                #     if not packet:
-                #         print("OUT OF LOOP")
-                #         break
-                #     data.append(packet)
-                # msg = pickle.loads(b"".join(data))
-                # print(msg)
                 data = self.sock.recv(4096)
                 msg = pickle.loads(data)
                 self.data_handler.handle_data(msg)

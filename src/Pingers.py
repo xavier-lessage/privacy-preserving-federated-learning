@@ -1,6 +1,8 @@
 import threading
 from time import sleep
 
+from PROJH402.src.utils import transaction_to_dict
+
 
 class ChainPinger(threading.Thread):
     def __init__(self, node, enode, timeout=2.0):
@@ -23,6 +25,7 @@ class ChainPinger(threading.Thread):
 
             except (ConnectionAbortedError, BrokenPipeError):
                 pass
+
             except Exception as e:
                 self.flag.set()
                 raise e
@@ -46,13 +49,18 @@ class MemPoolPinger(threading.Thread):
 
     def run(self):
         while not self.flag.is_set():
-            content = self.node.mempool
+            transaction_list = self.node.mempool.values()
+            content = []
+            for t in transaction_list:
+                content.append(transaction_to_dict(t))
             try:
                 self.data_handler.send_message_to(self.dest_enode, content, "mempool_sync")
                 sleep(self.interval)
 
             except (ConnectionAbortedError, BrokenPipeError):
+                # self.flag.set()
                 pass
+
             except Exception as e:
                 self.flag.set()
                 raise e

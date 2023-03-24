@@ -50,7 +50,6 @@ class ConnectionThread(threading.Thread):
                 pass
             except Exception as e:
                 self.terminate_flag.set()
-                logging.error(data)
                 raise e
 
         self.disconnection_queue.append(self.enode)

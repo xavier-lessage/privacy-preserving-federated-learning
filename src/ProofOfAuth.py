@@ -14,7 +14,7 @@ NONCE_DROP = 0x0000000000000000
 DIFF_NOTURN = 1
 DIFF_INTURN = 2
 SIGNER_LIMIT = 3
-GENESIS_BLOCK = Block(0, {"enode://1@127.0.0.1:1234": 4}, [], 0, 0, 0, 0,
+GENESIS_BLOCK = Block(0, {"enode://1@127.0.0.1:1234": 4, "enode://2@127.0.0.1:1235": 0, "n": 0}, [], 0, 0, 0, 0,
                       ["enode://1@127.0.0.1:1234", "enode://2@127.0.0.1:1235", "enode://3@127.0.0.1:1236"])
 
 
@@ -53,7 +53,9 @@ class ProofOfAuthority:
 
             elif chain[i].parent_hash != last_block_hash:
                 logging.error("Error in the blockchain")
-                logging.error(chain)
+                logging.error(chain[i].parent_hash + "###" + last_block_hash)
+                for b in chain:
+                    logging.error(b.print_header())
                 return False
             else:
                 last_block = chain[i]
@@ -76,12 +78,13 @@ class ProofOfAuthority:
 
         # Verify block state
         if not self.trust:
-            s = copy.copy(previous_state)
+            s = copy.deepcopy(previous_state)
             for transaction in block.data:
                 s.apply_transaction(transaction)
             if s.state_hash() != block.state.state_hash():
                 logging.error(f"Invalid state {previous_state.balances}")
                 logging.error(f"{s.balances}")
+                print(f"{block.state.balances}")
                 logging.error(f"{block.data}")
                 return False
 
@@ -144,18 +147,24 @@ class ProofOfAuthThread(threading.Thread):
 
             # IMPORTANT: For the moment extraData stored in nonce and signature stored in Miner_id, to be changed
 
-            if block_number > self.node.get_block('last').height and timestamp > (self.node.get_block('last').timestamp + self.period - 1):
-                block = Block(block_number, self.node.get_block('last').hash, self.node.mempool.copy(),
+            previous_block = copy.copy(self.node.get_block('last'))
+            if block_number > previous_block.height and timestamp > (previous_block.timestamp + self.period - 1):
+                data = list((self.node.mempool.copy().values()))
+                block = Block(block_number, previous_block.hash, data,
                               self.node.enode,
-                              timestamp, difficulty, self.node.get_block('last').total_difficulty, None)
+                              timestamp, difficulty, previous_block.total_difficulty, None)
 
-                block.update_state(copy.copy(self.node.get_block('last').state))
+                previous_state = previous_block.state
+                block.update_state(state=previous_state)
 
                 self.node.chain.append(block)
                 self.node.broadcast_last_block()
                 self.node.mempool.clear()
                 logging.info(f"Block produced by Node {self.node.id}: " + str(block.compute_block_hash()))
-                logging.info(repr(block) + str(time()) + "\n")
+                logging.info(f"{repr(block)}")
+                # logging.info(f"###{len(block.data)}###")
+                logging.info(f"###{block.state.balances}### \n")
+
 
             sleep(self.period - delay)
 

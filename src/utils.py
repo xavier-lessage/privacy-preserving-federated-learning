@@ -1,6 +1,8 @@
 import urllib.parse
 from hashlib import sha256
 
+from PROJH402.src.Transaction import Transaction
+
 
 def verify_chain(chain):
     """
@@ -29,6 +31,13 @@ def compute_hash(list):
     hash = sha256(hash_string.encode()).hexdigest()
     return hash
 
+def transaction_to_dict(transaction):
+    return {"source": transaction.source, "destination": transaction.destination, "data": transaction.data,
+            "value": transaction.value, "nonce": transaction.nonce}
+
+
+def dict_to_transaction(_dict):
+    return Transaction(_dict["source"], _dict["destination"], _dict["data"], _dict["value"], _dict["nonce"])
 
 def verify_transaction(transaction):
     pass

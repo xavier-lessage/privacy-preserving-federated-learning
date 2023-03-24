@@ -1,13 +1,14 @@
+import copy
 import uuid
 from hashlib import sha256
 from random import randint
 from time import time
 
-from PROJH402.src.utils import compute_hash, verify_transaction
+from PROJH402.src.utils import compute_hash, verify_transaction, transaction_to_dict, dict_to_transaction
 
 
 class Block:
-    def __init__(self, height, parent_hash, data, miner_id, timestamp, difficulty, total_diff, nonce=None):
+    def __init__(self, height, parent_hash, data, miner_id, timestamp, difficulty, total_diff, nonce=None, balances=None):
         self.height = height
         self.parent_hash = parent_hash
         self.data = data
@@ -16,11 +17,8 @@ class Block:
         self.difficulty = difficulty
         self.total_difficulty = total_diff + difficulty
 
-        self.state = State()
+        self.state = State(balances)
         # self.state = {}
-        for t in data:
-            self.state.apply_transaction(t)
-        self.state_hash = self.state.state_hash()
 
         if not nonce:
             nonce = randint(0, 1000)
@@ -36,7 +34,7 @@ class Block:
         :return: hash of the block
         """
         _list = [self.height, self.parent_hash, self.transactions_root, self.miner_id, self.timestamp, self.difficulty,
-                self.total_difficulty, self.nonce, self.state_hash]
+                self.total_difficulty, self.nonce, self.state.state_hash()]
 
         self.hash = compute_hash(_list)
 
@@ -47,7 +45,8 @@ class Block:
         computes the hash of the block transactions
         :return: the hash of the transactions
         """
-        self.transactions_root = compute_hash([self.data])
+        transaction_list = [transaction_to_dict(t) for t in self.data]
+        self.transactions_root = compute_hash(transaction_list)
         return self.transactions_root
 
     def verify(self):
@@ -69,11 +68,8 @@ class Block:
         """
         Prints the block information
         """
-        print("Index: ", self.height)
-        print("Hash", self.compute_block_hash())
-        print("Nonce: ", self.nonce)
-        print("Previous: ", self.parent_hash)
-        print("data: ", self.data)
+        return f'["{self.height}", "{self.parent_hash}", "{self.miner_id}", "{self.state.balances}"' \
+               f', "{self.timestamp}", "{self.difficulty}", "{self.total_difficulty}", "{self.nonce}", {self.hash}]'
 
     def get_header_hash(self):
         header = [self.parent_hash, self.transactions_root, self.timestamp, self.difficulty, self.nonce]
@@ -91,7 +87,7 @@ class Block:
 
     def update_state(self, state=None):
         if state:
-            self.state = state
+            self.state = copy.deepcopy(state)
         for t in self.data:
             self.state.apply_transaction(t)
 
@@ -119,14 +115,19 @@ class Block:
 
 
 def block_to_list(block):
-    return [block.height, block.parent_hash, block.data, block.miner_id, block.timestamp, block.difficulty,
+    data = []
+    for t in block.data:
+        data.append(transaction_to_dict(t))
+    return [block.height, block.parent_hash, data, block.miner_id, block.timestamp, block.difficulty,
             block.total_difficulty, block.nonce, block.state.balances]
 
 
 def create_block_from_list(_list):
     height = _list[0]
     parent_hash = _list[1]
-    data = _list[2]
+    data = []
+    for d in _list[2]:
+        data.append(dict_to_transaction(d))
     miner_id = _list[3]
     timestamp = _list[4]
     difficulty = _list[5]
@@ -134,9 +135,9 @@ def create_block_from_list(_list):
     nonce = _list[7]
     state_balance = _list[8]
 
-    b = Block(height, parent_hash, data, miner_id, timestamp, difficulty, total_difficulty, nonce)
-    state = State(state_balance)
-    b.update_state(state)
+    b = Block(height, parent_hash, data, miner_id, timestamp, difficulty, total_difficulty, nonce, state_balance)
+    # state = State(state_balance)
+    # b.state.balances = state_balance
     return b
 
 
@@ -146,7 +147,7 @@ class State:
             self.balances = balances
         else:
             self.balances = dict()
-        self.balances["n"] = 0
+            self.balances["n"] = 0
 
     def add_k(self, k):
         self.balances["n"] += k

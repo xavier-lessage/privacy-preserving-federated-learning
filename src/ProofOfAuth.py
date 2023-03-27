@@ -14,19 +14,28 @@ NONCE_DROP = 0x0000000000000000
 DIFF_NOTURN = 1
 DIFF_INTURN = 2
 SIGNER_LIMIT = 3
-GENESIS_BLOCK = Block(0, {"enode://1@127.0.0.1:1234": 4, "enode://2@127.0.0.1:1235": 0, "n": 0}, [], 0, 0, 0, 0,
-                      ["enode://1@127.0.0.1:1234", "enode://2@127.0.0.1:1235", "enode://3@127.0.0.1:1236"])
+
+def generate_genesis(auth_signers_list, initial_balances):
+    state_var = {"n": 0, "balances": initial_balances}
+    return Block(0, 0000, [], auth_signers_list, 0, 0, 0, nonce=1, state_var=state_var)
+
+
+auth_signers = ["enode://1@127.0.0.1:1234", "enode://2@127.0.0.1:1235", "enode://3@127.0.0.1:1236"]
+initial_balances = {"enode://1@127.0.0.1:1234": 4, "enode://2@127.0.0.1:1235": 0}
+GENESIS_BLOCK = generate_genesis(auth_signers, initial_balances)
 
 
 class ProofOfAuthority:
-    def __init__(self):
-        self.genesis = GENESIS_BLOCK
-        initial_state = State(GENESIS_BLOCK.parent_hash)
-        self.genesis.update_state(initial_state)
-        self.block_generation = ProofOfAuthThread
-        self.epoch_length = EPOCH_LENGTH
+    """
+    Consensus protocol based on https://eips.ethereum.org/EIPS/eip-225
+    """
 
-        self.auth_signers = GENESIS_BLOCK.nonce
+    def __init__(self, genesis=GENESIS_BLOCK):
+        self.genesis = genesis
+        self.block_generation = ProofOfAuthThread
+
+        # List of authorized block producers
+        self.auth_signers = GENESIS_BLOCK.miner_id
         self.signer_count = len(self.auth_signers)
 
         # Boolean to check or not the block states
@@ -59,22 +68,15 @@ class ProofOfAuthority:
                 return False
             else:
                 last_block = chain[i]
-
-            # if chain[i].miner_id == last_block.miner_id:
-            #     stack += 1
-            # else:
-            #     stack = 0
-
-            # if stack >= SIGNER_LIMIT:
-            #     print("Signer limit reached")
-            #     print(chain)
-            #     return False
             i += 1
         return True
 
     def verify_block(self, block, previous_state):
-        # for transaction in block.data:
-        #   verify_transaction(transaction)
+        # Verify signer
+        if block.miner_id in self.auth_signers:
+            signer_index = self.auth_signers.index(block.miner_id)
+        else:
+            return False
 
         # Verify block state
         if not self.trust:
@@ -82,17 +84,11 @@ class ProofOfAuthority:
             for transaction in block.data:
                 s.apply_transaction(transaction)
             if s.state_hash() != block.state.state_hash():
-                logging.error(f"Invalid state {previous_state.balances}")
-                logging.error(f"{s.balances}")
-                print(f"{block.state.balances}")
+                logging.error(f"Invalid state {previous_state.state_variables}")
+                logging.error(f"{s.state_variables}")
+                print(f"{block.state.state_variables}")
                 logging.error(f"{block.data}")
                 return False
-
-        # Verify signer
-        if block.miner_id in self.auth_signers:
-            signer_index = self.auth_signers.index(block.miner_id)
-        else:
-            return False
 
         # Check Total Difficulty
         if block.height % self.signer_count == signer_index:
@@ -132,22 +128,15 @@ class ProofOfAuthThread(threading.Thread):
         while not self.flag.is_set():
             timestamp = time()
             delay = 0
-            current_diff = self.node.get_block('last').total_difficulty
             block_number = len(self.node.chain)
             if block_number % self.signer_count == self.index:
                 difficulty = DIFF_INTURN
             else:
-                delay = randint(self.period//10, self.period//3)
+                delay = randint(self.period // 10, self.period // 3)
                 sleep(delay)
                 difficulty = DIFF_NOTURN
 
-            if block_number % self.node.consensus.epoch_length == 0:
-                # Checkpoint
-                pass
-
-            # IMPORTANT: For the moment extraData stored in nonce and signature stored in Miner_id, to be changed
-
-            previous_block = copy.copy(self.node.get_block('last'))
+            previous_block = copy.deepcopy(self.node.get_block('last'))
             if block_number > previous_block.height and timestamp > (previous_block.timestamp + self.period - 1):
                 data = list((self.node.mempool.copy().values()))
                 block = Block(block_number, previous_block.hash, data,
@@ -160,11 +149,9 @@ class ProofOfAuthThread(threading.Thread):
                 self.node.chain.append(block)
                 self.node.broadcast_last_block()
                 self.node.mempool.clear()
-                logging.info(f"Block produced by Node {self.node.id}: " + str(block.compute_block_hash()))
+                logging.info(f"Block produced by Node {self.node.id}: ")
                 logging.info(f"{repr(block)}")
-                # logging.info(f"###{len(block.data)}###")
-                logging.info(f"###{block.state.balances}### \n")
-
+                logging.info(f"###{block.state.state_variables}### \n")
 
             sleep(self.period - delay)
 

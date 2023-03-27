@@ -33,7 +33,7 @@ def compute_hash(list):
 
 def transaction_to_dict(transaction):
     return {"source": transaction.source, "destination": transaction.destination, "data": transaction.data,
-            "value": transaction.value, "nonce": transaction.nonce}
+            "value": transaction.value, "nonce": transaction.id}
 
 
 def dict_to_transaction(_dict):

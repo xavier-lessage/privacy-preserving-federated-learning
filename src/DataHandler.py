@@ -8,9 +8,9 @@ from PROJH402.src.utils import dict_to_transaction
 
 
 class DataHandler:
-    def __init__(self, node, node_thread):
+    def __init__(self, node, node_server_thread):
         self.node = node
-        self.node_thread = node_thread
+        self.node_server_thread = node_server_thread
         self.enode = self.node.enode
         self.id = node.id
 
@@ -18,8 +18,6 @@ class DataHandler:
 
         # {enode : height}
         self.pending_block_request = {}
-        self.message_queue = Queue()
-        # threading.Thread(target=self.handle_messages).start()
 
     def stop(self):
         self.flag.set()
@@ -41,12 +39,10 @@ class DataHandler:
             self.update_mempool(msg["data"])
         if msg_type == "chain_sync":
             self.handle_chain_sync(msg)
-            # print("Node " + str(self.id) + " received : " + str(msg))
         if msg_type == "block":
-            self.handle_block(msg)
+            self.handle_block_request(msg)
         if msg_type == "chain":
             self.handle_partial_chain(msg)
-            # print("Node " + str(self.id) + " received : " + str(msg))
 
     def check_message_validity(self, message):
         mandatory_keys = ["data", "type", "receiver", "sender"]
@@ -66,10 +62,10 @@ class DataHandler:
         message = self.construct_message(content, msg_type, enode)
 
         dumped_message = pickle.dumps(message)
-        if enode not in self.node_thread.connection_threads:
+        if enode not in self.node_server_thread.connection_threads:
             return
         else:
-            connection = self.node_thread.connection_threads[enode]
+            connection = self.node_server_thread.connection_threads[enode]
         connection.send(dumped_message)
 
     def construct_message(self, data, msg_type, receiver):
@@ -104,9 +100,9 @@ class DataHandler:
         # print(f"{self.node.id} Sending request")
         self.pending_block_request[enode] = height
 
-    def handle_block(self, message):
+    def handle_block_request(self, message):
         """
-        Tries to find the block in its blockChain
+        Tries to find the requested block in its blockChain
         """
         block_header = message["data"][0]
         total_difficulty = message["data"][1]

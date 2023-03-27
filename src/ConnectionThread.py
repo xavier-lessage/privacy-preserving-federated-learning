@@ -24,10 +24,7 @@ class ConnectionThread(threading.Thread):
         self.terminate_flag = threading.Event()
         self.sock.settimeout(timeout)
 
-        self.timer = time()
-
     def send(self, data):
-        # self.sock.sendall(data.encode("utf-8"))
         try:
             self.sock.sendall(data)
         except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError):

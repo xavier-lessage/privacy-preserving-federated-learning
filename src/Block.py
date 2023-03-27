@@ -1,8 +1,4 @@
-import copy
-import uuid
-from hashlib import sha256
 from random import randint
-from time import time
 
 from PROJH402.src.utils import compute_hash, transaction_to_dict, dict_to_transaction
 
@@ -11,6 +7,7 @@ class Block:
     """
     Class representing a block of a blockchain containing transactions
     """
+
     def __init__(self, height, parent_hash, data, miner_id, timestamp, difficulty, total_diff, nonce=None,
                  state_var=None):
         self.height = height
@@ -23,10 +20,9 @@ class Block:
 
         self.state = State(state_var)
 
-        if nonce is None:
-            nonce = randint(0, 1000)
-
         self.nonce = nonce
+        if nonce is None:
+            self.nonce = randint(0, 1000)
 
         self.transactions_root = self.transactions_hash()
         self.hash = self.compute_block_hash()
@@ -36,7 +32,8 @@ class Block:
         computes the hash of the block header
         :return: hash of the block
         """
-        _list = [self.height, self.parent_hash, self.transactions_hash(), self.miner_id, self.timestamp, self.difficulty,
+        _list = [self.height, self.parent_hash, self.transactions_hash(), self.miner_id, self.timestamp,
+                 self.difficulty,
                  self.total_difficulty, self.nonce, self.state.state_hash()]
 
         self.hash = compute_hash(_list)
@@ -52,7 +49,7 @@ class Block:
         self.transactions_root = compute_hash(transaction_list)
         return self.transactions_root
 
-    def verify(self):
+    def verify(self):  ###### POW
         target_string = '1' * (256 - self.difficulty)
         target_string = target_string.zfill(256)
 
@@ -75,64 +72,21 @@ class Block:
         header = [self.parent_hash, self.transactions_hash(), self.timestamp, self.difficulty, self.nonce]
         return compute_hash(header)
 
-    def increase_nonce(self):
+    def increase_nonce(self):  ###### POW
         self.nonce += 1
 
-    def update_data(self, data):
+    def update_data(self, data):  ###### POW
         """
         Updates the data of a block
         """
         self.data = data.copy()
         self.transactions_root = self.transactions_hash()
 
-    def update_state(self, state=None):
-        if state:
-            self.state = copy.deepcopy(state)
-        for t in self.data:
-            self.state.apply_transaction(t)
-
-        self.compute_block_hash()
-
     def __repr__(self):
         """
         Translate the block object in a string object
         """
         return f"## Height: {self.height}, Diff: {self.difficulty}, Total_diff: {self.total_difficulty}, Producer: {self.miner_id} ##"
-
-    def update(self, height, parent_hash, data, difficulty, total_difficulty):
-        self.timestamp = time()
-        self.height = height
-        self.parent_hash = parent_hash
-        self.update_data(data)
-        self.difficulty = difficulty
-        self.total_difficulty = total_difficulty
-
-        self.update_state()
-
-
-def block_to_list(block):
-    data = []
-    for t in block.data:
-        data.append(transaction_to_dict(t))
-    return [block.height, block.parent_hash, data, block.miner_id, block.timestamp, block.difficulty,
-            block.total_difficulty, block.nonce, block.state.state_variables]
-
-
-def create_block_from_list(_list):
-    height = _list[0]
-    parent_hash = _list[1]
-    data = []
-    for d in _list[2]:
-        data.append(dict_to_transaction(d))
-    miner_id = _list[3]
-    timestamp = _list[4]
-    difficulty = _list[5]
-    total_difficulty = _list[6] - difficulty
-    nonce = _list[7]
-    state_variables = _list[8]
-
-    b = Block(height, parent_hash, data, miner_id, timestamp, difficulty, total_difficulty, nonce, state_variables)
-    return b
 
 
 class State:
@@ -169,3 +123,31 @@ class State:
 
     def state_hash(self):
         return compute_hash(self.state_variables)
+
+
+def block_to_list(block):
+    """
+    Translates a block in a list
+    """
+    data = []
+    for t in block.data:
+        data.append(transaction_to_dict(t))
+    return [block.height, block.parent_hash, data, block.miner_id, block.timestamp, block.difficulty,
+            block.total_difficulty, block.nonce, block.state.state_variables]
+
+
+def create_block_from_list(_list):
+    height = _list[0]
+    parent_hash = _list[1]
+    data = []
+    for d in _list[2]:
+        data.append(dict_to_transaction(d))
+    miner_id = _list[3]
+    timestamp = _list[4]
+    difficulty = _list[5]
+    total_difficulty = _list[6] - difficulty
+    nonce = _list[7]
+    state_variables = _list[8]
+
+    b = Block(height, parent_hash, data, miner_id, timestamp, difficulty, total_difficulty, nonce, state_variables)
+    return b

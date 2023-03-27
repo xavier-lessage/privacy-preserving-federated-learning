@@ -43,14 +43,7 @@ def f():
     # print(node2.get_block('last').state.balances)
     # print(node3.get_block('last').state.balances)
 
-def g():
-    s = State({"enode://1@127.0.0.1:1234": 4, "n": 3})
-    trans = Transaction("enode://1@127.0.0.1:1234", "enode://2@127.0.0.1:1235", {"action": "add_k", "input": 1}, 0)
-    b = Block(1, 0000, [trans], 3, 0, 0, 0, state_var=s.balances)
-    b.update_state(s)
-    l = block_to_list(b)
-    b = create_block_from_list(l)
-    print(b.state.balances)
+
 
 
 if __name__ == '__main__':

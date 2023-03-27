@@ -26,7 +26,9 @@ class ConnectionThread(threading.Thread):
 
     def send(self, data):
         try:
-            self.sock.sendall(data)
+            if self.sock.fileno() > 0:
+                self.sock.sendall(data)
+
         except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError):
             self.terminate_flag.set()
 

@@ -1,10 +1,9 @@
-import urllib.parse
 from hashlib import sha256
 
 from PROJH402.src.Transaction import Transaction
 
 
-def verify_chain(chain):
+def verify_chain(chain): ###### POW
     """
     Checks every block of the chain to see if the previous_hash matches the hash of the previous block
     """
@@ -40,4 +39,5 @@ def transaction_to_dict(transaction):
 def dict_to_transaction(_dict):
     return Transaction(_dict["source"], _dict["destination"], _dict["data"], _dict["value"], _dict["timestamp"],
                        _dict["nonce"], _dict["id"])
+
 

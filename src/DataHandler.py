@@ -3,8 +3,8 @@ import threading
 from queue import Queue
 
 from PROJH402.src import constants
-from PROJH402.src.Block import block_to_list
 from PROJH402.src.utils import dict_to_transaction
+from PROJH402.src.Block import block_to_list
 
 
 class DataHandler:

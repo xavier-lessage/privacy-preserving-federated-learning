@@ -143,12 +143,13 @@ class ProofOfAuthThread(threading.Thread):
             previous_block = copy.deepcopy(self.node.get_block('last'))
             if block_number > previous_block.height and timestamp > (previous_block.timestamp + self.period - 1):
                 data = list((self.node.mempool.copy().values()))
+                previous_state_var = previous_block.state.state_variables
                 block = Block(block_number, previous_block.hash, data,
                               self.node.enode,
-                              timestamp, difficulty, previous_block.total_difficulty, None)
+                              timestamp, difficulty, previous_block.total_difficulty, state_var=previous_state_var)
 
-                previous_state = previous_block.state
-                block.update_state(state=previous_state)
+                for transaction in block.data:
+                    block.state.apply_transaction(transaction)
 
                 self.node.chain.append(block)
                 self.node.broadcast_last_block()

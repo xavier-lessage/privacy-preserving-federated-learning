@@ -28,18 +28,16 @@ def compute_hash(list):
     for elem in list:
         hash_string += str(elem)
 
-    hash = sha256(hash_string.encode()).hexdigest()
-    return hash
+    return sha256(hash_string.encode()).hexdigest()
+
 
 def transaction_to_dict(transaction):
     return {"source": transaction.source, "destination": transaction.destination, "data": transaction.data,
-            "value": transaction.value, "nonce": transaction.id}
+            "value": transaction.value, "timestamp": transaction.timestamp, "nonce": transaction.nonce,
+            "id": transaction.id}
 
 
 def dict_to_transaction(_dict):
-    return Transaction(_dict["source"], _dict["destination"], _dict["data"], _dict["value"], _dict["nonce"])
-
-def verify_transaction(transaction):
-    pass
-
+    return Transaction(_dict["source"], _dict["destination"], _dict["data"], _dict["value"], _dict["timestamp"],
+                       _dict["nonce"], _dict["id"])
 

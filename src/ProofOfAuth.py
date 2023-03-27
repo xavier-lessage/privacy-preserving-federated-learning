@@ -49,17 +49,21 @@ class ProofOfAuthority:
         while i < len(chain):
             last_block_hash = last_block.compute_block_hash()
 
+            # Check Timestamp difference
             if chain[i].timestamp - last_block.timestamp < BLOCK_PERIOD // 2:
                 logging.error("Timestamp error in the blockchain")
                 logging.error(len(chain))
                 logging.error(f"Previous: {last_block.timestamp}, Current: {chain[i].timestamp}")
                 logging.error(chain)
                 return False
+
+            # Check the block
             elif not self.verify_block(chain[i], last_block.state):
                 logging.error("Block error")
                 logging.error(chain[i].__repr__())
                 return False
 
+            # Check the parent hash
             elif chain[i].parent_hash != last_block_hash:
                 logging.error("Error in the blockchain")
                 logging.error(chain[i].parent_hash + "###" + last_block_hash)

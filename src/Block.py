@@ -4,10 +4,13 @@ from hashlib import sha256
 from random import randint
 from time import time
 
-from PROJH402.src.utils import compute_hash, verify_transaction, transaction_to_dict, dict_to_transaction
+from PROJH402.src.utils import compute_hash, transaction_to_dict, dict_to_transaction
 
 
 class Block:
+    """
+    Class representing a block of a blockchain containing transactions
+    """
     def __init__(self, height, parent_hash, data, miner_id, timestamp, difficulty, total_diff, nonce=None,
                  state_var=None):
         self.height = height
@@ -33,7 +36,7 @@ class Block:
         computes the hash of the block header
         :return: hash of the block
         """
-        _list = [self.height, self.parent_hash, self.transactions_root, self.miner_id, self.timestamp, self.difficulty,
+        _list = [self.height, self.parent_hash, self.transactions_hash(), self.miner_id, self.timestamp, self.difficulty,
                  self.total_difficulty, self.nonce, self.state.state_hash()]
 
         self.hash = compute_hash(_list)
@@ -50,9 +53,6 @@ class Block:
         return self.transactions_root
 
     def verify(self):
-        for transaction in self.data:
-            verify_transaction(transaction)
-
         target_string = '1' * (256 - self.difficulty)
         target_string = target_string.zfill(256)
 
@@ -72,7 +72,7 @@ class Block:
                f', "{self.timestamp}", "{self.difficulty}", "{self.total_difficulty}", "{self.nonce}", {self.hash}]'
 
     def get_header_hash(self):
-        header = [self.parent_hash, self.transactions_root, self.timestamp, self.difficulty, self.nonce]
+        header = [self.parent_hash, self.transactions_hash(), self.timestamp, self.difficulty, self.nonce]
         return compute_hash(header)
 
     def increase_nonce(self):

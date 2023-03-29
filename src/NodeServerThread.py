@@ -67,6 +67,9 @@ class NodeServerThread(threading.Thread):
         print("Node " + str(self.id) + " stopped")
 
     def handle_connection(self, sock):
+        """
+        Incoming connection request
+        """
         connected_node_info = sock.recv(1024)
         connected_node_info = pickle.loads(connected_node_info)
 
@@ -81,6 +84,9 @@ class NodeServerThread(threading.Thread):
         self.node.add_peer(enode, connected_node_info)
 
     def connect_to(self, enode):
+        """
+        Request connection
+        """
         parsed_enode = urllib.parse.urlparse(enode)
         address = (parsed_enode.hostname, parsed_enode.port)
 

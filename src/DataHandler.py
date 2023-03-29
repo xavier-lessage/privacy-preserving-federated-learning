@@ -8,23 +8,21 @@ from PROJH402.src.Block import block_to_list
 
 
 class DataHandler:
+    """
+    Class handling the data synchronisation and the communication syntax for one node.
+    """
     def __init__(self, node, node_server_thread):
         self.node = node
         self.node_server_thread = node_server_thread
         self.enode = self.node.enode
         self.id = node.id
 
-        self.flag = threading.Event()
-
         # {enode : height}
         self.pending_block_request = {}
 
-    def stop(self):
-        self.flag.set()
-
     def handle_data(self, msg):
         """
-        Choose action to do from the message information
+        Choose action to do based on the message received
         """
         if constants.DEBUG:
             print("Node " + str(self.id) + " received : " + str(msg))
@@ -104,17 +102,16 @@ class DataHandler:
         """
         Tries to find the requested block in its blockChain
         """
-        block_header = message["data"][0]
+        block_header_hash = message["data"][0]
         total_difficulty = message["data"][1]
         height = message["data"][2]
         potential_common_block = self.node.get_block(height)
-        if potential_common_block.get_header_hash() == block_header \
+        if potential_common_block.get_header_hash() == block_header_hash \
                 and potential_common_block.total_difficulty == total_difficulty:
             # Common block found
             print(f"common block found in node {self.node.id}")
             partial_chain = []
             i = height + 1
-            # print(self.node.chain)
             while i < len(self.node.chain):
                 partial_chain.append(block_to_list(self.node.get_block(i)))
                 i += 1
@@ -132,8 +129,7 @@ class DataHandler:
             # Try again with chain[height-1]
             self.request_block(height-1, message["sender"])
             return
-        val = self.pending_block_request.pop(message["sender"], None)
-        if val is not None:
+        if self.pending_block_request.pop(message["sender"], None) is not None:
             self.node.sync_chain(message["data"], height)
 
     def update_mempool(self, transactions):

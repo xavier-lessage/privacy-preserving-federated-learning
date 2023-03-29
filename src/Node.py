@@ -70,7 +70,6 @@ class Node:
             self.remove_peer(peer)
 
         self.node_server_thread.stop()
-        self.data_handler.stop()
         self.syncing = False
 
     def destroy_node(self):
@@ -95,25 +94,29 @@ class Node:
                 self.add_to_mempool(transaction)
 
     def sync_chain(self, chain_repr, height):
+        """
+        Handles an incoming partial chain that is supposed to fit at the height indicated
+        If the chain is correct and fits well there, it merges
+        """
         print("Merging chains")
-        chain = []
+        partial_chain = []
         # Reconstruct the partial chain
         for block_repr in chain_repr:
             block = create_block_from_list(block_repr)
-            chain.append(block)
+            partial_chain.append(block)
 
-        if not self.verify_chain(chain):
+        # Verify the partial chain based on the consensus
+        if not self.verify_chain(partial_chain):
             return
 
-        if chain[0].parent_hash == self.get_block(height).hash:
+        if partial_chain[0].parent_hash == self.get_block(height).hash:
             # update mempool
-            for block in chain:
+            for block in partial_chain:
                 for transaction in block.data:
                     self.mempool.pop(transaction.id, None)
                     self.previous_transactions_id.add(transaction.id)
-                    # logging.info(transaction.nonce)
 
-            # retrieving possible missed transactions
+            # Recovering the transactions not present in the merged chain
             for block in self.chain[height+1:]:
                 for transaction in block.data:
                     if transaction.id not in self.previous_transactions_id:
@@ -121,9 +124,11 @@ class Node:
 
             # Replace self chain with the other chain
             del self.chain[height+1:]
-            self.chain.extend(chain)
+            self.chain.extend(partial_chain)
             self.broadcast_last_block()
-            print(f"Node {self.id} has updated its chain, total difficulty : {self.get_block('last').total_difficulty}, n = {chain[-1].state.state_variables.get('n')}")
+
+            print(f"Node {self.id} has updated its chain, total difficulty : {self.get_block('last').total_difficulty}, "
+                  f"n = {partial_chain[-1].state.state_variables.get('n')}")
             for block in self.chain[-5:]:
                 print(f"{block.__repr__()}   ##{len(block.data)} ##  {block.state.state_variables}")
         else:
@@ -154,10 +159,7 @@ class Node:
             self.sync_threads.pop(enode)
         self.node_server_thread.disconnect_from(enode)
 
-
     def node_info(self):
-        protocol = {"consensus": self.consensus}
-        #info = {"enode": self.enode, "id": self.id, "ip": self.host, "port": self.port, "protocol": protocol}
         info = {"enode": self.enode, "id": self.id, "ip": self.host, "port": self.port}
         return info
 
@@ -165,6 +167,9 @@ class Node:
         return self.consensus.verify_chain(chain, self.get_block('last').state)
 
     def broadcast_last_block(self):
+        """
+        Broadcast the last block of its chain to all its peers
+        """
         last_block = self.get_block('last')
         content = (last_block.get_header_hash(), last_block.total_difficulty)
         peer_list = copy.copy(self.peers)  # To avoid iterating on a changing size object
@@ -192,5 +197,6 @@ class Node:
         return False
 
     def add_to_mempool(self, transaction):
-        # TODO : return sorted mempool based on timestamp
         self.mempool[transaction.id] = transaction
+        # Sort mempool based on timestamp
+        self.mempool = dict(sorted(self.mempool.items(), key=lambda x: x[1].timestamp))

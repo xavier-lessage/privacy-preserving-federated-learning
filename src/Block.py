@@ -61,13 +61,6 @@ class Block:
             return True
         return False
 
-    def print_header(self):
-        """
-        Prints the block information
-        """
-        return f'["{self.height}", "{self.parent_hash}", "{self.miner_id}", "{self.state.state_variables}"' \
-               f', "{self.timestamp}", "{self.difficulty}", "{self.total_difficulty}", "{self.nonce}", {self.hash}]'
-
     def get_header_hash(self):
         header = [self.parent_hash, self.transactions_hash(), self.timestamp, self.difficulty, self.nonce]
         return compute_hash(header)

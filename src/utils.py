@@ -1,4 +1,5 @@
 from hashlib import sha256
+from time import sleep
 
 from PROJH402.src.Transaction import Transaction
 
@@ -40,4 +41,19 @@ def dict_to_transaction(_dict):
     return Transaction(_dict["source"], _dict["destination"], _dict["data"], _dict["value"], _dict["timestamp"],
                        _dict["nonce"], _dict["id"])
 
+class CustomTimer:
+    def __init__(self):
+        self.time_counter = 0
+
+    def time(self):
+        return self.time_counter
+
+    def sleep(self, period):
+        starting_time = self.time()
+
+        while self.time_counter < starting_time + period:
+            sleep(0.01)
+
+    def increase_timer(self):
+        self.time_counter += 1
 

@@ -2,19 +2,19 @@ import pickle
 import threading
 
 import socket
+import time
 import urllib.parse
 from queue import Queue
 from time import sleep
 
 from PROJH402.src import constants
-from PROJH402.src.ConnectionThread import ConnectionThread
-from PROJH402.src.DataHandler import DataHandler
+from PROJH402.src.MessageHandler import MessageHandler
 from PROJH402.src.constants import ENCODING
 
 
 class NodeServerThread(threading.Thread):
     """
-    Thread used by the node to communicate to other nodes
+    Thread answering to requests, every node has one
     """
 
     def __init__(self, node, host, port, id):
@@ -26,16 +26,16 @@ class NodeServerThread(threading.Thread):
         self.host = host
         self.port = port
 
-        self.data_handler = DataHandler(node, self)
+        self.message_handler = MessageHandler(self)
 
         self.terminate_flag = threading.Event()
-
-        self.connection_threads = {}
-        self.disconnections = []
 
         print("Node " + str(self.id) + " starting on port " + str(self.port))
 
     def run(self):
+        """
+        Waiting for one other Node to connect
+        """
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.bind((self.host, self.port))
@@ -47,6 +47,7 @@ class NodeServerThread(threading.Thread):
                 client_sock, client_address = self.sock.accept()
                 self.handle_connection(client_sock)
 
+
             except socket.timeout:
                 pass
 
@@ -55,70 +56,61 @@ class NodeServerThread(threading.Thread):
 
             sleep(0.01)
 
-            while len(self.disconnections) > 0:
-                enode = self.disconnections.pop()
-            #     self.node.remove_peer(enode)
-
-        for connection in self.connection_threads.values():
-            connection.stop()
-
         self.sock.shutdown(True)
         self.sock.close()
         print("Node " + str(self.id) + " stopped")
 
     def handle_connection(self, sock):
         """
-        Incoming connection request
+        Answer with the asked information
         """
-        connected_node_info = sock.recv(1024)
-        connected_node_info = pickle.loads(connected_node_info)
 
-        node_info = self.node.node_info()
-        node_info = pickle.dumps(node_info)
-        sock.send(node_info)
+        # Receive request
+        data = sock.recv(4096)
+        request = pickle.loads(data)
 
-        enode = connected_node_info.get("enode")
-        connection_thread = self.create_connection(sock, enode)
-        self.connection_threads[enode] = connection_thread
-        connection_thread.start()
-        self.node.add_peer(enode, connected_node_info)
+        # Send the answer
+        answer = self.message_handler.handle_request(request)
+        self.send(pickle.dumps(answer), sock)
 
-    def connect_to(self, enode):
+    def send_request(self, enode, request):
         """
-        Request connection
+        Sends a request and returns the answer
         """
         parsed_enode = urllib.parse.urlparse(enode)
         address = (parsed_enode.hostname, parsed_enode.port)
 
+        # Send the request
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.connect(address)
+        try:
+            sock.connect(address)
+            self.send(pickle.dumps(request), sock)
 
-        node_info = self.node.node_info()
-        node_info = pickle.dumps(node_info)
-        sock.send(node_info)
-        connected_node_info = sock.recv(1024)
-        connected_node_info = pickle.loads(connected_node_info)
-        connected_node_id = connected_node_info.get("id")
-        if constants.DEBUG:
-            print(f"Node {self.id} connected with node: {connected_node_id}")
+        except Exception as e:
+            print(f"Address : {address}")
+            raise e
+        # Get the answer
+        data = self.receive(sock)
+        try:
+            answer = pickle.loads(data)
+        except EOFError as e:
+            print(data)
+            raise e
+        self.message_handler.handle_answer(answer)
 
-        thread_client = self.create_connection(sock, enode)
-        self.connection_threads[enode] = thread_client
-        return thread_client, connected_node_info
-
-    def disconnect_from(self, enode):
-        connection = self.connection_threads.get(enode)
-        if connection:
-            connection.stop()
-            self.connection_threads.pop(enode)
+        sock.close()
 
     def stop(self):
         self.terminate_flag.set()
 
-    def create_connection(self, sock, enode):
-        return ConnectionThread(sock, self, enode, self.data_handler, self.disconnections)
+    def send(self, data, sock):
+        sock.sendall(data)
 
-
-
-
+    def receive(self, sock):
+        data = []
+        while True:
+            packet = sock.recv(4096)
+            if not packet: break
+            data.append(packet)
+        return b"".join(data)
 

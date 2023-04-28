@@ -1,7 +1,5 @@
-from PROJH402.src.Block import State
 from PROJH402.src.Node import Node
-from PROJH402.src.ProofOfAuth import ProofOfAuthority
-from PROJH402.src.Transaction import Transaction
+from PROJH402.src.consensus.ProofOfAuth import ProofOfAuthority
 from PROJH402.src.constants import LOCALHOST
 
 

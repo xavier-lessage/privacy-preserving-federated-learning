@@ -1,16 +1,10 @@
 import logging
-import multiprocessing
-import os
 import sys
-import threading
-from time import sleep, time
-
-from PROJH402.src.Block import State, Block, block_to_list, create_block_from_list
 
 sys.path.append("/home/ubuntu/Documents/toychain-argos/PROJH402")
 
 from PROJH402.src.Node import Node
-from PROJH402.src.ProofOfAuth import ProofOfAuthority
+from PROJH402.src.consensus.ProofOfAuth import ProofOfAuthority
 from PROJH402.src.Transaction import Transaction
 from PROJH402.src.constants import LOCALHOST
 

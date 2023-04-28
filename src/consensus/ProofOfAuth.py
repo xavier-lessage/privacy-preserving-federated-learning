@@ -7,13 +7,9 @@ from time import time, sleep
 from PROJH402.src import constants
 from PROJH402.src.Block import Block, State
 
-EPOCH_LENGTH = 3000
-BLOCK_PERIOD = 15
-NONCE_AUTH = 0xffffffffffffffff
-NONCE_DROP = 0x0000000000000000
+BLOCK_PERIOD = 30
 DIFF_NOTURN = 1
 DIFF_INTURN = 2
-SIGNER_LIMIT = 3
 
 def generate_genesis(auth_signers_list, initial_balances):
     state_var = {"n": 0, "balances": initial_balances}
@@ -67,8 +63,6 @@ class ProofOfAuthority:
             elif chain[i].parent_hash != last_block_hash:
                 logging.error("Error in the blockchain")
                 logging.error(chain[i].parent_hash + "###" + last_block_hash)
-                for b in chain:
-                    logging.error(b.print_header())
                 return False
             else:
                 last_block = chain[i]
@@ -90,7 +84,7 @@ class ProofOfAuthority:
             if s.state_hash() != block.state.state_hash():
                 logging.error(f"Invalid state {previous_state.state_variables}")
                 logging.error(f"{s.state_variables}")
-                print(f"{block.state.state_variables}")
+                logging.error(f"{block.state.state_variables}")
                 logging.error(f"{block.data}")
                 return False
 
@@ -130,14 +124,15 @@ class ProofOfAuthThread(threading.Thread):
 
     def run(self):
         while not self.flag.is_set():
-            timestamp = time()
+            timestamp = self.node.custom_timer.time()
             delay = 0
             block_number = len(self.node.chain)
             if block_number % self.signer_count == self.index:
                 difficulty = DIFF_INTURN
             else:
-                delay = randint(self.period // 10, self.period // 3)
-                sleep(delay)
+                delay = randint(self.period//10, self.period//3)
+                self.node.custom_timer.sleep(delay)
+
                 difficulty = DIFF_NOTURN
 
             previous_block = copy.deepcopy(self.node.get_block('last'))
@@ -152,13 +147,12 @@ class ProofOfAuthThread(threading.Thread):
                     block.state.apply_transaction(transaction)
 
                 self.node.chain.append(block)
-                self.node.broadcast_last_block()
                 self.node.mempool.clear()
                 logging.info(f"Block produced by Node {self.node.id}: ")
                 logging.info(f"{repr(block)}")
                 logging.info(f"###{block.state.state_variables}### \n")
 
-            sleep(self.period - delay)
+            self.node.custom_timer.sleep(self.period - delay)
 
     def stop(self):
         self.flag.set()

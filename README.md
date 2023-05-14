@@ -39,7 +39,6 @@ The consensus options are contained in their own file
 The __genesis block__ is organised this way:
 
 - miner_id contains the authorised signers list
-- 
 ### Other options
 All the other options are contained in the ``constants.py`` file.
 

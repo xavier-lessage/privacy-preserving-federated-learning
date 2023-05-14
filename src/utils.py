@@ -4,24 +4,10 @@ from time import sleep
 from PROJH402.src.Transaction import Transaction
 
 
-def verify_chain(chain): ###### POW
-    """
-    Checks every block of the chain to see if the previous_hash matches the hash of the previous block
-    """
-    last_block = chain[0]
-    i = 1
-    while i < len(chain):
-        if chain[i].parent_hash == last_block.compute_block_hash() and chain[i].verify:
-            last_block = chain[i]
-            i += 1
-        else:
-            print("Error in the blockchain")
-            print(chain)
-            return False
-    return True
-
-
 def compute_hash(list):
+    """
+    Computes the hash of all the elements contained in the list by putting them in a string
+    """
     if len(list) < 1:
         return
     hash_string = ""

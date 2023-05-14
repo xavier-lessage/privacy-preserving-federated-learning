@@ -10,7 +10,7 @@ Every consensus needs the following methods/attributes:
 
 - ``verify_chain(chain, previous_state)``: Method that verifies that the specified ``chain`` respects the consensus. The ``previous_state`` is the state of the previous block.
 - ``self.block_generation``: Specified in the constructor, this is a thread object that will produce the blocks respecting the consensus.
-
+- ``self.genesis``: Genesis block that will be the first block of every node using this consensus.
 
 ### Custom Timer
 The whole project is based on a custom timer. Each node possess its own ``CustomTimer``. At each control step of one robot, the timer is incremented by 1. 

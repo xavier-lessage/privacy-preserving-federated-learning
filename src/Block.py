@@ -49,31 +49,12 @@ class Block:
         self.transactions_root = compute_hash(transaction_list)
         return self.transactions_root
 
-    def verify(self):  ###### POW
-        target_string = '1' * (256 - self.difficulty)
-        target_string = target_string.zfill(256)
-
-        hash_int = int(self.hash, 16)
-        binary_hash = bin(hash_int)
-        binary_hash = binary_hash[3:]
-
-        if target_string > binary_hash:
-            return True
-        return False
-
     def get_header_hash(self):
         header = [self.parent_hash, self.transactions_hash(), self.timestamp, self.difficulty, self.nonce]
         return compute_hash(header)
 
     def increase_nonce(self):  ###### POW
         self.nonce += 1
-
-    def update_data(self, data):  ###### POW
-        """
-        Updates the data of a block
-        """
-        self.data = data.copy()
-        self.transactions_root = self.transactions_hash()
 
     def __repr__(self):
         """
@@ -90,6 +71,9 @@ class State:
             self.state_variables = {"n": 0, "balances": {}}
 
     def add_k(self, k):
+        """
+        custom function that adds k to a state variable named n
+        """
         self.state_variables["n"] += k
 
     def apply_transaction(self, t):
@@ -106,6 +90,7 @@ class State:
         # Make the payment
         if t.destination not in self.state_variables["balances"]:
             self.state_variables["balances"][t.destination] = 0
+
         self.state_variables["balances"][t.destination] += t.value
 
         # Apply the other actions (smart contract)

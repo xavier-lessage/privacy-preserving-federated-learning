@@ -126,6 +126,13 @@ class MiningThread(threading.Thread):
         self.flag.set()
 
     def update_block(self, block, previous_block):
+        """
+        Updates the block by refreshing its information
+
+        Args:
+            block(Block): block in the production process
+            previous_block(Block): the previous block in the chain, it should be the last block
+        """
         block.height = previous_block.height + 1
         block.timestamp = self.timer.time()
         block.parent_hash = previous_block.hash

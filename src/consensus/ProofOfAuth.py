@@ -111,6 +111,8 @@ class ProofOfAuthThread(threading.Thread):
         self.period = period
         self.flag = threading.Event()
 
+        self.timer = self.node.custom_timer
+
         self.consensus = self.node.consensus
 
         self.auth_signers = self.consensus.auth_signers
@@ -124,14 +126,14 @@ class ProofOfAuthThread(threading.Thread):
 
     def run(self):
         while not self.flag.is_set():
-            timestamp = self.node.custom_timer.time()
+            timestamp = self.timer.time()
             delay = 0
             block_number = len(self.node.chain)
             if block_number % self.signer_count == self.index:
                 difficulty = DIFF_INTURN
             else:
                 delay = randint(self.period//10, self.period//3)
-                self.node.custom_timer.sleep(delay)
+                self.timer.sleep(delay)
 
                 difficulty = DIFF_NOTURN
 
@@ -152,7 +154,7 @@ class ProofOfAuthThread(threading.Thread):
                 logging.info(f"{repr(block)}")
                 logging.info(f"###{block.state.state_variables}### \n")
 
-            self.node.custom_timer.sleep(self.period - delay)
+            self.timer.sleep(self.period - delay)
 
     def stop(self):
         self.flag.set()

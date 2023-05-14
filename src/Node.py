@@ -8,7 +8,7 @@ from PROJH402.src.Block import Block, create_block_from_list
 from PROJH402.src.NodeServerThread import NodeServerThread
 from PROJH402.src.Pingers import ChainPinger, MemPoolPinger
 from PROJH402.src.constants import ENCODING, CHAIN_SYNC_INTERVAL, MEMPOOL_SYNC_INTERVAL, DEBUG
-from PROJH402.src.utils import compute_hash, verify_chain, CustomTimer, transaction_to_dict
+from PROJH402.src.utils import compute_hash, CustomTimer, transaction_to_dict
 
 
 
@@ -65,7 +65,7 @@ class Node:
 
     def start_tcp(self):
         """
-        starts the NodeThread that handles the TCP connection with other nodes
+        starts the NodeServerThread that handles the TCP connection with other nodes
         """
         self.syncing = True
         self.node_server_thread.start()
@@ -88,6 +88,9 @@ class Node:
         self.stop_mining()
 
     def get_block(self, height):
+        """
+        returns the block at the referred height in the blockchain
+        """
         if height == 'last':
             return self.chain[-1]
         elif height == 'first':
@@ -96,15 +99,24 @@ class Node:
             try:
                 return self.chain[height]
             except IndexError:
-                # logging.error(f"{height} - {len(self.chain)} - {self.get_block('last').height}")
                 return None
 
     def sync_mempool(self, transactions):
+        """
+        Synchronises the mempool with a list of transaction objects
+        """
         for transaction in transactions:
             if transaction.id not in self.previous_transactions_id:
                 self.add_to_mempool(transaction)
 
     def sync_chain(self, chain_repr, height):
+        """
+        Adds the partial chain received to the blockchain
+
+        Args:
+            chain_repr(list[str]): list of block representation from a partial chain received
+            height: the height at which the partial chain is supposed to be inserted
+        """
         logging.info("Merging chains")
         chain = []
         # Reconstruct the partial chain
@@ -112,9 +124,8 @@ class Node:
             block = create_block_from_list(block_repr)
             chain.append(block)
 
-        # if chain[-1].total_difficulty < self.get_block('last').total_difficulty:
-        #     print('Lower difficulty')
-        #     return
+        if chain[-1].total_difficulty < self.get_block('last').total_difficulty:
+            return
 
         if not self.verify_chain(chain):
             return
@@ -164,6 +175,10 @@ class Node:
         self.add_to_mempool(transaction)
 
     def get_transaction(self, transaction_id):
+        """
+        Returns the transaction with the indicated id
+        if it is not in the chain or in the mempool : returns None
+        """
         transaction = self.mempool.get(transaction_id, None)
         if not transaction:
             for block in self.chain:
@@ -173,6 +188,9 @@ class Node:
         return transaction
 
     def get_transaction_receipt(self, transaction_id):
+        """
+        returns whether the specified transaction is in the chain
+        """
         if transaction_id in self.previous_transactions_id:
             return True
         return False

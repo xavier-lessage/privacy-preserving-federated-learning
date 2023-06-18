@@ -25,7 +25,7 @@ The consensus options are contained in their own file
 ##### Proof of work
 ``MINING_DIFFICULTY``: This represents the difficulty of mining and is thus related to the time taken to produce a block
 
-``ProofOfAuth.trust``: Determines if the state should be checked or not when verifying a chain 
+``ProofOfWork.trust``: Determines if the state should be checked or not when verifying a chain 
 
 ##### Proof of authority
 ``BLOCK_PERIOD``: Minimum difference between two consecutive block’s timestamps.

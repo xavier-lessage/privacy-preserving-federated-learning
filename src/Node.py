@@ -23,6 +23,7 @@ class Node:
         self.mempool = {}
 
         # Transactions contained in the chain
+        self.my_transaction_nonce = 0
         self.previous_transactions_id = set()
 
         self.host = host
@@ -47,15 +48,23 @@ class Node:
         self.chain_sync_thread = ChainPinger(self)
 
         self.syncing = False
-
         self.mining = False
         self.mining_thread = consensus.block_generation(self)
-
+    
+    def step(self):
+        """
+        Executes a time step for this node
+        """
+        self.custom_timer.step()
+        self.mining_thread.step()
+        self.mempool_sync_thread.step()
+        self.chain_sync_thread.step()
+    
     def start_mining(self):
-        print("Starting the mining \n")
-        # self.mining_thread.start()
-        x = threading.Thread(target=self.mining_thread.start())
-        x.start()
+        print(f"Node {self.id} started mining")
+        self.mining_thread.start()
+        # x = threading.Thread(target=self.mining_thread.start())
+        # x.start()
         self.mining = True
 
     def stop_mining(self):
@@ -91,7 +100,7 @@ class Node:
         """
         returns the block at the referred height in the blockchain
         """
-        if height == 'last':
+        if height == 'last' or height == 'latest':
             return self.chain[-1]
         elif height == 'first':
             return self.chain[0]
@@ -124,8 +133,8 @@ class Node:
             block = create_block_from_list(block_repr)
             chain.append(block)
 
-        if chain[-1].total_difficulty < self.get_block('last').total_difficulty:
-            return
+        # if chain[-1].total_difficulty < self.get_block('last').total_difficulty:
+        #     return
 
         if not self.verify_chain(chain):
             return
@@ -154,7 +163,7 @@ class Node:
 
     def add_peer(self, enode):
         if enode not in self.peers:
-            logging.info(f"Node {self.id} adding peer at {enode}")
+            logging.debug(f"Node {self.id} adding peer at {enode}")
             parsed_enode = urllib.parse.urlparse(enode)
             node_info = {"id": parsed_enode.username, "host": parsed_enode.hostname, "port": parsed_enode.port, "enode": enode}
             self.peers[enode] = node_info
@@ -162,7 +171,7 @@ class Node:
 
     def remove_peer(self, enode):
         if self.peers.pop(enode, None):
-            logging.info(f"Node {self.id} removing peer at {enode}")
+            logging.debug(f"Node {self.id} removing peer at {enode}")
 
     def node_info(self):
         info = {"enode": self.enode, "id": self.id, "ip": self.host, "port": self.port}
@@ -195,5 +204,33 @@ class Node:
             return True
         return False
 
+    def get_all_transactions(self):
+        """
+        Returns a list with all transaction objects
+        """
+        all_txs = []
+        for block in self.chain:
+            all_txs.extend(block.data)
+        return all_txs
+
+    def get_last_signed_block(self):
+        for block in reversed(self.chain):
+            if block.miner_id == self.enode:
+                return block.height
+        return 0
+
     def add_to_mempool(self, transaction):
         self.mempool[transaction.id] = transaction
+
+    def display_chain(self):
+        for block in self.chain:
+            print(block)
+
+    @property  
+    def key(self):
+        return self.id
+    
+    def gen_enode(self, id, host = '127.0.0.1', port = 0):
+        if port == 0:
+            port = 1233 + id
+        return f"enode://{id}@{host}:{port}"

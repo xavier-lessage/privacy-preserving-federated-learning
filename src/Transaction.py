@@ -1,19 +1,22 @@
-import pickle
-import time
 from uuid import uuid4
 
-
 class Transaction:
-    def __init__(self, source, dest, data, value, timestamp, nonce=None, id=None):
-        self.source = source
-        self.destination = dest
-        self.data = data
+    def __init__(self, sender, receiver, value, data={}, timestamp=None, nonce=None, id=None):
+        self.source = str(sender)
+        self.sender = str(sender)
+
+        self.destination = str(receiver)
+        self.receiver    = str(receiver)
+
         self.value = value
+
+        self.data = data
+
         self.timestamp = timestamp
         self.nonce = nonce
         self.id = id
-
         if not id:
             self.id = str(uuid4())
 
-
+    def __str__(self):
+        return f"hash: {self.id}, to: {self.receiver}, from: {self.sender}, value: {self.value}"

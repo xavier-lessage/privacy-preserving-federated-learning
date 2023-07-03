@@ -6,75 +6,162 @@ from PROJH402.src.constants import MEMPOOL_SYNC_INTERVAL, CHAIN_SYNC_INTERVAL, M
 from PROJH402.src.utils import transaction_to_dict
 
 
-class ChainPinger(threading.Thread):
+# class ChainPinger(threading.Thread):
+#     def __init__(self, node, interval=CHAIN_SYNC_INTERVAL):
+#         super(ChainPinger, self).__init__()
+
+#         self.node = node
+#         self.message_handler = node.message_handler
+#         self.node_server = node.node_server_thread
+#         self.interval = interval
+
+#         self.flag = threading.Event()
+
+#     def run(self):
+#         while not self.flag.is_set():
+#             peer_list = copy.copy(self.node.peers) # To avoid iterating on a changing size object
+#             try:
+#                 for peer in peer_list:
+#                     self.launch_sync(peer)
+
+#                 self.node.custom_timer.sleep(self.interval)
+
+#             except (ConnectionAbortedError, BrokenPipeError):
+#                 pass
+
+#             except Exception as e:
+#                 self.flag.set()
+#                 raise e
+
+
+#     def stop(self):
+#         self.flag.set()
+
+#     def launch_sync(self, enode):
+#         request = self.message_handler.construct_message("", CHAIN_SYNC_TAG, enode)
+#         self.node_server.send_request(enode, request)
+
+
+# class MemPoolPinger(threading.Thread):
+#     def __init__(self, node, interval=MEMPOOL_SYNC_INTERVAL):
+#         super(MemPoolPinger, self).__init__()
+
+#         self.node = node
+#         self.node_server = node.node_server_thread
+#         self.message_handler = node.message_handler
+#         self.interval = interval
+
+#         self.flag = threading.Event()
+
+#     def run(self):
+#         while not self.flag.is_set():
+#             peer_list = copy.copy(self.node.peers)  # To avoid iterating on a changing size object
+#             try:
+#                 for peer in peer_list:
+#                     self.launch_sync(peer)
+
+#                 self.node.custom_timer.sleep(self.interval)
+
+#             except (ConnectionAbortedError, BrokenPipeError):
+#                 pass
+
+#             except Exception as e:
+#                 self.flag.set()
+#                 raise e
+
+#     def stop(self):
+#         self.flag.set()
+
+#     def launch_sync(self, enode):
+#         request = self.message_handler.construct_message("", MEMPOOL_SYNC_TAG, enode)
+#         self.node_server.send_request(enode, request)
+
+class ChainPinger():
     def __init__(self, node, interval=CHAIN_SYNC_INTERVAL):
-        super(ChainPinger, self).__init__()
 
         self.node = node
         self.message_handler = node.message_handler
         self.node_server = node.node_server_thread
-        self.interval = interval
+        self.interval = interval+int(node.id)
 
-        self.flag = threading.Event()
+        self.flag  = False
+        self.sleep = 0
 
     def run(self):
-        while not self.flag.is_set():
-            peer_list = copy.copy(self.node.peers) # To avoid iterating on a changing size object
-            try:
-                for peer in peer_list:
-                    self.launch_sync(peer)
+        peer_list = copy.copy(self.node.peers) # To avoid iterating on a changing size object
+        try:
+            for peer in peer_list:
+                self.launch_sync(peer)
 
-                self.node.custom_timer.sleep(self.interval)
+            self.sleep = self.interval
 
-            except (ConnectionAbortedError, BrokenPipeError):
-                pass
+        except (ConnectionAbortedError, BrokenPipeError) as e:
+            print(e)
 
-            except Exception as e:
-                self.flag.set()
-                raise e
+        except Exception as e:
+            self.stop()
+            raise e
+            
+    def step(self):
+        if self.flag:
+            if self.sleep > 0:
+                self.sleep -= 1
+            else:
+                self.run()
 
+    def start(self):
+        self.flag = True
 
     def stop(self):
-        self.flag.set()
+        self.flag = False
 
     def launch_sync(self, enode):
         request = self.message_handler.construct_message("", CHAIN_SYNC_TAG, enode)
         self.node_server.send_request(enode, request)
 
 
-class MemPoolPinger(threading.Thread):
+class MemPoolPinger():
     def __init__(self, node, interval=MEMPOOL_SYNC_INTERVAL):
-        super(MemPoolPinger, self).__init__()
-
         self.node = node
         self.node_server = node.node_server_thread
         self.message_handler = node.message_handler
-        self.interval = interval
+        self.interval = interval+int(node.id)
 
-        self.flag = threading.Event()
+        self.flag  = False
+        self.sleep = 0
 
     def run(self):
-        while not self.flag.is_set():
-            peer_list = copy.copy(self.node.peers)  # To avoid iterating on a changing size object
-            try:
-                for peer in peer_list:
-                    self.launch_sync(peer)
+        peer_list = copy.copy(self.node.peers)  # To avoid iterating on a changing size object
+        try:
+            for peer in peer_list:
+                self.launch_sync(peer)
 
-                self.node.custom_timer.sleep(self.interval)
+            self.sleep = self.interval
 
-            except (ConnectionAbortedError, BrokenPipeError):
-                pass
+        except (ConnectionAbortedError, BrokenPipeError) as e:
+            print(e)
 
-            except Exception as e:
-                self.flag.set()
-                raise e
+        except Exception as e:
+            self.stop()
+            raise e
+
+    def step(self):
+        if self.flag:
+            if self.sleep > 0:
+                self.sleep -= 1
+            else:
+                self.run()
+
+    def start(self):
+        self.flag = True
 
     def stop(self):
-        self.flag.set()
+        self.flag = False
 
     def launch_sync(self, enode):
         request = self.message_handler.construct_message("", MEMPOOL_SYNC_TAG, enode)
         self.node_server.send_request(enode, request)
+
 
 
 

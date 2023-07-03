@@ -25,6 +25,7 @@ class NodeServerThread(threading.Thread):
         self.node = node
         self.host = host
         self.port = port
+        self.max_packet = 0
 
         self.message_handler = MessageHandler(self)
 
@@ -54,7 +55,7 @@ class NodeServerThread(threading.Thread):
             except Exception as e:
                 raise e
 
-            sleep(0.01)
+            sleep(0.00001)
 
         self.sock.shutdown(True)
         self.sock.close()
@@ -79,7 +80,7 @@ class NodeServerThread(threading.Thread):
         """
         parsed_enode = urllib.parse.urlparse(enode)
         address = (parsed_enode.hostname, parsed_enode.port)
-
+        
         # Send the request
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
@@ -87,8 +88,9 @@ class NodeServerThread(threading.Thread):
             self.send(pickle.dumps(request), sock)
 
         except Exception as e:
-            print(f"Address : {address}")
+            print(f"Error Connecting to Address : {address}")
             raise e
+            
         # Get the answer
         data = self.receive(sock)
         try:
@@ -105,12 +107,13 @@ class NodeServerThread(threading.Thread):
 
     def send(self, data, sock):
         sock.sendall(data)
+    
 
     def receive(self, sock):
         data = []
-        while True:
-            packet = sock.recv(4096)
-            if not packet: break
-            data.append(packet)
+        packet = sock.recv(65536)
+        if len(packet) > self.max_packet:
+            # print('New max packet:', len(packet))
+            self.max_packet = len(packet)
+        data.append(packet)
         return b"".join(data)
-

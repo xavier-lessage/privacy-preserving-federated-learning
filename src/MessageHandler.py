@@ -89,7 +89,7 @@ class MessageHandler:
                 logging.debug(f"Node {self.node.id} is chain sync")
             return
 
-        if last_block.total_difficulty < message["data"][1]:
+        if last_block.total_difficulty <= message["data"][1]:
             # If the chains have equal sizes, node keeps his
             # If the chain of the node is longer than the received one, let him do the work
             self.request_block(len(self.node.chain), message["sender"])

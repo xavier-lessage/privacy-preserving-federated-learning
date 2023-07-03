@@ -18,14 +18,15 @@ def compute_hash(list):
 
 
 def transaction_to_dict(transaction):
-    return {"source": transaction.source, "destination": transaction.destination, "data": transaction.data,
-            "value": transaction.value, "timestamp": transaction.timestamp, "nonce": transaction.nonce,
-            "id": transaction.id}
+    return vars(transaction)
+
+    # return {"source": transaction.source, "destination": transaction.destination, "data": transaction.data,
+    #         "value": transaction.value, "timestamp": transaction.timestamp, "nonce": transaction.nonce,
+    #         "id": transaction.id}
 
 
 def dict_to_transaction(_dict):
-    return Transaction(_dict["source"], _dict["destination"], _dict["data"], _dict["value"], _dict["timestamp"],
-                       _dict["nonce"], _dict["id"])
+    return Transaction(_dict["source"], _dict["destination"], _dict["value"], _dict["data"],_dict["timestamp"], _dict["nonce"], _dict["id"])
 
 class CustomTimer:
     def __init__(self):
@@ -43,3 +44,10 @@ class CustomTimer:
     def increase_timer(self):
         self.time_counter += 1
 
+    def step(self):
+        self.time_counter += 1
+
+def gen_enode(id, host = '127.0.0.1', port = 0):
+    if port == 0:
+        port = 1233 + id
+    return f"enode://{id}@{host}:{port}"

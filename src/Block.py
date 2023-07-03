@@ -11,6 +11,7 @@ class Block:
     def __init__(self, height, parent_hash, data, miner_id, timestamp, difficulty, total_diff, nonce=None,
                  state_var=None):
         self.height = height
+        self.number = height
         self.parent_hash = parent_hash
         self.data = data
         self.miner_id = miner_id
@@ -34,7 +35,7 @@ class Block:
         """
         _list = [self.height, self.parent_hash, self.transactions_hash(), self.miner_id, self.timestamp,
                  self.difficulty,
-                 self.total_difficulty, self.nonce, self.state.state_hash()]
+                 self.total_difficulty, self.nonce]
 
         self.hash = compute_hash(_list)
 
@@ -60,48 +61,38 @@ class Block:
         """
         Translate the block object in a string object
         """
-        return f"## Height: {self.height}, Diff: {self.difficulty}, Total_diff: {self.total_difficulty}, Producer: {self.miner_id} ##"
+        return f"## H: {self.height}, D: {self.difficulty}, TD: {self.total_difficulty}, P: {self.miner_id}, BH: {self.hash[0:5]}, TS:{self.timestamp}, #T:{len(self.data)}, SH:{self.state.state_hash()[0:5]}##"
 
 
 class State:
     def __init__(self, state_variables=None):
         self.state_variables = state_variables
-        self.balances = 0
+        self.balances = {}
+        
         if not state_variables:
             self.state_variables = {"n": 0, "balances": {}}
 
-    def add_k(self, k):
-        """
-        custom function that adds k to a state variable named n
-        """
-        self.state_variables["n"] += k
+    def apply_transaction(self, tx):
 
-    def apply_transaction(self, t):
-        # Initialise account
-        if t.source not in self.state_variables["balances"]:
-            self.state_variables["balances"][t.source] = 0
+        self.state_variables["balances"].setdefault(tx.sender, 0)
+        self.state_variables["balances"].setdefault(tx.receiver, 0)
 
-        # Check the balance
-        if self.state_variables["balances"][t.source] - t.value >= 0:
-            self.state_variables["balances"][t.source] -= t.value
+        # Apply the transaction value
+        if self.state_variables["balances"][tx.sender] - tx.value >= 0:
+            self.state_variables["balances"][tx.sender] -= tx.value
+            self.state_variables["balances"][tx.receiver] += tx.value
+            self.state_variables["n"] += 1
         else:
             return
 
-        # Make the payment
-        if t.destination not in self.state_variables["balances"]:
-            self.state_variables["balances"][t.destination] = 0
-
-        self.state_variables["balances"][t.destination] += t.value
-
-        # Apply the other actions (smart contract)
-        if t.data.get("action"):
-            action = getattr(self, t.data.get("action"))
-            _input = t.data.get("input")
-            action(_input)
+        # Apply the other functions contained in data
+        if tx.data.get("function"):
+            function = getattr(self, tx.data.get("function"))
+            _inputs = tx.data.get("inputs")
+            self.sc.function(_inputs)
 
     def state_hash(self):
-        return compute_hash(self.state_variables)
-
+        return compute_hash(self.state_variables.values())
 
 def block_to_list(block):
     """

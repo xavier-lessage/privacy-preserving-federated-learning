@@ -1,7 +1,7 @@
 import logging
 import sys
 
-sys.path.append("/home/ubuntu/Documents/toychain-argos/PROJH402")
+sys.path.append("/home/eksander/toychain-argos/")
 
 from PROJH402.src.Node import Node
 from PROJH402.src.consensus.ProofOfAuth import ProofOfAuthority
@@ -19,16 +19,22 @@ logging.basicConfig(level=logging.INFO)
 
 def f():
     # logging.basicConfig(level=logging.INFO)
-    trans = Transaction("enode://1@127.0.0.1:1234", "enode://2@127.0.0.1:1235", {"action": "add_k", "input": 1}, 0)
-    node1.mempool[trans.id] = trans
-    node3.start_tcp()
+    # trans = Transaction("enode://1@127.0.0.1:1234", "enode://2@127.0.0.1:1235", {"action": "add_k", "input": 1}, 0, 0)
+    # node1.mempool[trans.id] = trans
+    
+    
     node1.start_tcp()
     node2.start_tcp()
-
-    node3.start_mining()
+    node3.start_tcp()
+    
     node1.start_mining()
     node2.start_mining()
+    node3.start_mining()
 
+    node1.add_peer(node2.enode)
+    node1.add_peer(node3.enode)
+    node2.add_peer(node1.enode)
+    node2.add_peer(node3.enode)
     node3.add_peer(node1.enode)
     node3.add_peer(node2.enode)
 
@@ -37,8 +43,25 @@ def f():
     # print(node2.get_block('last').state.balances)
     # print(node3.get_block('last').state.balances)
 
-
-
-
+import time
 if __name__ == '__main__':
     f()
+    max_steps = 600
+    curr_step = 0
+    step = 1
+    while True:
+        print(curr_step)
+        node1.step()
+        node2.step()
+        node3.step()
+        # time.sleep(0.000001)
+        curr_step+=step
+        if curr_step>max_steps:
+            break
+
+    print('Node 1')
+    print(node1.display_chain())
+    print('Node 2')
+    print(node2.display_chain())
+    print('Node 3')
+    print(node3.display_chain())

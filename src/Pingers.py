@@ -82,7 +82,7 @@ class ChainPinger():
         self.node = node
         self.message_handler = node.message_handler
         self.node_server = node.node_server_thread
-        self.interval = interval+int(node.id)
+        self.interval = interval
 
         self.flag  = False
         self.sleep = 0
@@ -93,7 +93,7 @@ class ChainPinger():
             for peer in peer_list:
                 self.launch_sync(peer)
 
-            self.sleep = self.interval
+            self.sleep = self.interval + (int(self.node.id)+ int(self.node.custom_timer.time())) % 10
 
         except (ConnectionAbortedError, BrokenPipeError) as e:
             print(e)
@@ -125,7 +125,7 @@ class MemPoolPinger():
         self.node = node
         self.node_server = node.node_server_thread
         self.message_handler = node.message_handler
-        self.interval = interval+int(node.id)
+        self.interval = interval
 
         self.flag  = False
         self.sleep = 0
@@ -136,7 +136,7 @@ class MemPoolPinger():
             for peer in peer_list:
                 self.launch_sync(peer)
 
-            self.sleep = self.interval
+            self.sleep = self.interval + (int(self.node.id)+ int(self.node.custom_timer.time())) % 10
 
         except (ConnectionAbortedError, BrokenPipeError) as e:
             print(e)

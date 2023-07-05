@@ -2,9 +2,8 @@ import copy
 import logging
 
 from PROJH402.src import constants
-from PROJH402.src.Block import block_to_list
 from PROJH402.src.constants import MEMPOOL_SYNC_TAG, CHAIN_SYNC_TAG, BLOCK_REQUEST_TAG, DEBUG
-from PROJH402.src.utils import dict_to_transaction, transaction_to_dict
+from PROJH402.src.utils import dict_to_transaction, transaction_to_dict, block_to_list
 
 
 class MessageHandler:

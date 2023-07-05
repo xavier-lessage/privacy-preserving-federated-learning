@@ -55,7 +55,7 @@ class ProofOfWork:
             s = copy.deepcopy(previous_state)
             for transaction in block.data:
                 s.apply_transaction(transaction)
-            if s.state_hash() != block.state.state_hash():
+            if s.state_hash != block.state.state_hash:
                 logging.error(f"Invalid state {previous_state.state_variables}")
                 logging.error(f"{s.state_variables}")
                 logging.error(f"{block.data}")

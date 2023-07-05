@@ -8,19 +8,16 @@ from PROJH402.src import constants
 from PROJH402.src.Block import Block, State
 from PROJH402.src.utils import gen_enode
 
-BLOCK_PERIOD = 30
+BLOCK_PERIOD = 150
 DIFF_NOTURN = 1
 DIFF_INTURN = 2
-DELAY_NOTURN = 5
-
-def generate_genesis(auth_signers_list, initial_balances):
-    state_var = {"n": 0, "balances": initial_balances}
-    return Block(0, 0000, [], auth_signers_list, 0, 0, 0, nonce=1, state_var=state_var)
+DELAY_NOTURN = 40
 
 
-auth_signers = [gen_enode(i) for i in range(1,9)]
-initial_balances = {"1": 1000, "2": 0}
-GENESIS_BLOCK = generate_genesis(auth_signers, initial_balances)
+auth_signers = [gen_enode(i) for i in range(1,26)]
+initial_state = State()
+
+GENESIS_BLOCK = Block(0, 0000, [], auth_signers, 0, 0, 0, nonce = 1, state = initial_state)
 
 
 class ProofOfAuthority:
@@ -83,7 +80,7 @@ class ProofOfAuthority:
             s = copy.deepcopy(previous_state)
             for transaction in block.data:
                 s.apply_transaction(transaction)
-            if s.state_hash() != block.state.state_hash():
+            if s.state_hash != block.state.state_hash:
                 logging.error(f"Invalid state {previous_state.state_variables}")
                 logging.error(f"{s.state_variables}")
                 logging.error(f"{block.state.state_variables}")
@@ -107,25 +104,28 @@ class ProofOfAuth():
     """
 
     def __init__(self, node, period=BLOCK_PERIOD):
+
         self.node = node
         self.period = period
-        self.flag = False
-
         self.timer = self.node.custom_timer
+
+        self.flag = False
         self.sleep = 0
 
         self.consensus = self.node.consensus
-
         self.auth_signers = self.consensus.auth_signers
         self.signer_count = len(self.auth_signers)
 
+        self.index = -1
         if self.node.enode in self.auth_signers:
             self.index = self.auth_signers.index(self.node.enode)
         else:
             print(f"Node {self.node.id} not allowed to produce blocks")
-            self.stop()
-
+            
     def run(self):
+
+        if self.index == -1: self.stop()
+
         timestamp = self.timer.time()
         last_block = copy.deepcopy(self.node.get_block('last'))
         last_signed_block = self.node.get_last_signed_block()
@@ -148,36 +148,40 @@ class ProofOfAuth():
         # After wait, do out of turn signature (diff = DIFF_NOTURN)
         else:
             difficulty = DIFF_NOTURN
-
-        previous_block = copy.deepcopy(self.node.get_block('last'))
-        previous_state = previous_block.state
         
-        if next_block_number > previous_block.height and timestamp > (previous_block.timestamp + self.period - 1):
+        if next_block_number > last_block.height and timestamp > (last_block.timestamp + self.period - 1):
 
-            # Get transactions from mempool, but remove those already in previous blocks
+            # Get the current block, state and mempool
+            previous_block = copy.deepcopy(self.node.get_block('last'))
+            previous_state = previous_block.state
             mempool = list((self.node.mempool.copy().values()))
-            data = []
-            for tx in mempool:
-                if tx.id not in self.node.previous_transactions_id:
-                    data.append(tx)
-                else:
-                    print('removed tx already in chain')
 
-            previous_state_var = previous_block.state.state_variables
-            block = Block(next_block_number, previous_block.hash, data,
-                            self.node.enode,
-                            timestamp, difficulty, previous_block.total_difficulty, state_var=previous_state_var)
+            # Filter out transactions already on the blockchain
+            data = [tx for tx in mempool if tx.id not in self.node.previous_transactions_id]
 
-            for transaction in block.data:
-                block.state.apply_transaction(transaction)
-                self.node.previous_transactions_id.add(transaction)
+            # Apply transactions to obtain the new state variables
+            for transaction in data:
+                previous_state.apply_transaction(transaction)
+            
+            # Generate the new block
+            block = Block(
+                        next_block_number, 
+                        previous_block.hash, 
+                        data,
+                        self.node.enode,
+                        timestamp, 
+                        difficulty, 
+                        previous_block.total_difficulty, 
+                        state = previous_state)
 
+            # Update the blockchain and mempool
             self.node.chain.append(block)
+            self.node.previous_transactions_id.update([tx.id for tx in block.data])
             self.node.mempool.clear()
+
             logging.info(f"Block produced by Node {self.node.id}: ")
             logging.info(f"{repr(block)}")
-            # logging.info(f"last_signed_block: {last_signed_block}")
-            logging.info(f"###{block.state.state_variables}### \n")
+            logging.info(f"{block.state.state_variables} \n")
 
     def step(self):
         if self.flag:

@@ -4,11 +4,11 @@ import threading
 import urllib.parse
 
 # from PROJH402.src.Block import Block
-from PROJH402.src.Block import Block, create_block_from_list
+from PROJH402.src.Block import Block
 from PROJH402.src.NodeServerThread import NodeServerThread
 from PROJH402.src.Pingers import ChainPinger, MemPoolPinger
 from PROJH402.src.constants import ENCODING, CHAIN_SYNC_INTERVAL, MEMPOOL_SYNC_INTERVAL, DEBUG
-from PROJH402.src.utils import compute_hash, CustomTimer, transaction_to_dict
+from PROJH402.src.utils import compute_hash, CustomTimer, transaction_to_dict, create_block_from_list
 
 
 
@@ -130,8 +130,8 @@ class Node:
         chain = []
         # Reconstruct the partial chain
         for block_repr in chain_repr:
-            block = create_block_from_list(block_repr)
-            chain.append(block)
+            block_vars = create_block_from_list(block_repr)
+            chain.append(Block(*block_vars))
 
         # if chain[-1].total_difficulty < self.get_block('last').total_difficulty:
         #     return

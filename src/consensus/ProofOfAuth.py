@@ -13,24 +13,21 @@ DIFF_NOTURN = 1
 DIFF_INTURN = 2
 DELAY_NOTURN = 40
 
-
 auth_signers = [gen_enode(i) for i in range(1,26)]
 initial_state = State()
-
 GENESIS_BLOCK = Block(0, 0000, [], auth_signers, 0, 0, 0, nonce = 1, state = initial_state)
-
 
 class ProofOfAuthority:
     """
     Consensus protocol based on https://eips.ethereum.org/EIPS/eip-225
     """
 
-    def __init__(self, genesis=GENESIS_BLOCK):
+    def __init__(self, genesis = GENESIS_BLOCK):
         self.genesis = genesis
         self.block_generation = ProofOfAuth
 
         # List of authorized block producers
-        self.auth_signers = GENESIS_BLOCK.miner_id
+        self.auth_signers = genesis.miner_id
         self.signer_count = len(self.auth_signers)
 
         # Boolean to check or not the block states

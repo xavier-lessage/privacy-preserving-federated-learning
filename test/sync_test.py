@@ -5,32 +5,38 @@ sys.path.append("/home/eksander/toychain-argos/")
 
 from PROJH402.src.Node import Node
 from PROJH402.src.consensus.ProofOfAuth import ProofOfAuthority
+from PROJH402.src.Block import Block, State
 from PROJH402.src.Transaction import Transaction
 from PROJH402.src.constants import LOCALHOST
+from PROJH402.src.utils import gen_enode
 
 
-# consensus = ProofOfWork()
-consensus = ProofOfAuthority()
-node1 = Node(1, LOCALHOST, 1234, consensus)
-node2 = Node(2, LOCALHOST, 1235, consensus)
-node3 = Node(3, LOCALHOST, 1236, consensus)
+auth_signers = [gen_enode(i) for i in range(1,4)]
+initial_state = State()
+
+GENESIS_BLOCK = Block(0, 0000, [], auth_signers, 0, 0, 0, nonce = 1, state = initial_state)
+CONSENSUS = ProofOfAuthority(genesis = GENESIS_BLOCK)
+
+# Create the nodes with (id, host, port, consensus_protocol)
+node1 = Node(1, LOCALHOST, 1234, CONSENSUS)
+node2 = Node(2, LOCALHOST, 1235, CONSENSUS)
+node3 = Node(3, LOCALHOST, 1236, CONSENSUS)
+
 logging.basicConfig(level=logging.INFO)
 
-
-def f():
-    # logging.basicConfig(level=logging.INFO)
-    # trans = Transaction("enode://1@127.0.0.1:1234", "enode://2@127.0.0.1:1235", {"action": "add_k", "input": 1}, 0, 0)
-    # node1.mempool[trans.id] = trans
+def init_network():
     
-    
+    # Start the TCP for syncing mempool and blockchain
     node1.start_tcp()
     node2.start_tcp()
     node3.start_tcp()
     
+    # Start the mining process for each node
     node1.start_mining()
     node2.start_mining()
     node3.start_mining()
 
+    # Add the peers of each node
     node1.add_peer(node2.enode)
     node1.add_peer(node3.enode)
     node2.add_peer(node1.enode)
@@ -38,27 +44,27 @@ def f():
     node3.add_peer(node1.enode)
     node3.add_peer(node2.enode)
 
-    # sleep(35)
-    # print(node1.get_block('last').state.balances)
-    # print(node2.get_block('last').state.balances)
-    # print(node3.get_block('last').state.balances)
-
 import time
 if __name__ == '__main__':
-    f()
-    max_steps = 600
+
+    init_network()
+
+    # Setup simulation steps
+    max_steps = 15000
     curr_step = 0
     step = 1
+
     while True:
         print(curr_step)
         node1.step()
         node2.step()
         node3.step()
-        # time.sleep(0.000001)
-        curr_step+=step
+        # time.sleep(0.05)
+        curr_step += step
         if curr_step>max_steps:
             break
-
+    
+    # Display the final blockchains at the end of the simulation
     print('Node 1')
     print(node1.display_chain())
     print('Node 2')

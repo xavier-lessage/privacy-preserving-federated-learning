@@ -56,9 +56,9 @@ class Node:
         Executes a time step for this node
         """
         self.custom_timer.step()
-        self.mining_thread.step()
         self.mempool_sync_thread.step()
         self.chain_sync_thread.step()
+        self.mining_thread.step()
     
     def start_mining(self):
         print(f"Node {self.id} started mining")

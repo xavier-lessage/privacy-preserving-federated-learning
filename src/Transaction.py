@@ -1,7 +1,7 @@
 from uuid import uuid4
 
 class Transaction:
-    def __init__(self, sender, receiver, value, data={}, timestamp=None, nonce=None, id=None):
+    def __init__(self, sender, receiver = 0, value = 0, data={}, timestamp=None, nonce=None, id=None):
         self.source = str(sender)
         self.sender = str(sender)
 

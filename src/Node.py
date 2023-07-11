@@ -1,16 +1,13 @@
-import copy
-import logging
-import threading
 import urllib.parse
 
-# from PROJH402.src.Block import Block
 from PROJH402.src.Block import Block
 from PROJH402.src.NodeServerThread import NodeServerThread
 from PROJH402.src.Pingers import ChainPinger, MemPoolPinger
 from PROJH402.src.constants import ENCODING, CHAIN_SYNC_INTERVAL, MEMPOOL_SYNC_INTERVAL, DEBUG
-from PROJH402.src.utils import compute_hash, CustomTimer, transaction_to_dict, create_block_from_list
+from PROJH402.src.utils import CustomTimer, create_block_from_list
 
-
+import logging
+logger = logging.getLogger('w3')
 
 class Node:
     """
@@ -50,6 +47,11 @@ class Node:
         self.syncing = False
         self.mining = False
         self.mining_thread = consensus.block_generation(self)
+    
+
+    @property
+    def sc(self):
+        return self.get_block('latest').state
     
     def step(self):
         """
@@ -92,7 +94,7 @@ class Node:
         self.syncing = False
 
     def destroy_node(self):
-        logging.info("Destroyed")
+        logger.info("Destroyed")
         self.stop_tcp()
         self.stop_mining()
 
@@ -126,7 +128,7 @@ class Node:
             chain_repr(list[str]): list of block representation from a partial chain received
             height: the height at which the partial chain is supposed to be inserted
         """
-        logging.info("Merging chains")
+        logger.info("Merging chains")
         chain = []
         # Reconstruct the partial chain
         for block_repr in chain_repr:
@@ -155,15 +157,15 @@ class Node:
             # Replace self chain with the other chain
             del self.chain[height+1:]
             self.chain.extend(chain)
-            logging.info(f"Node {self.id} has updated its chain, total difficulty : {self.get_block('last').total_difficulty}, n = {chain[-1].state.state_variables.get('n')}")
+            logger.info(f"Node {self.id} has updated its chain, total difficulty : {self.get_block('last').total_difficulty}, n = {chain[-1].state.state_variables.get('n')}")
             for block in self.chain[-5:]:
-                logging.info(f"{block.__repr__()}   ##{len(block.data)}##  {block.state.state_variables}")
+                logger.info(f"{block.__repr__()}   ##{len(block.data)}##  {block.state.state_variables}")
         else:
-            logging.info("Chain does not fit here")
+            logger.info("Chain does not fit here")
 
     def add_peer(self, enode):
         if enode not in self.peers:
-            logging.debug(f"Node {self.id} adding peer at {enode}")
+            logger.debug(f"Node {self.id} adding peer at {enode}")
             parsed_enode = urllib.parse.urlparse(enode)
             node_info = {"id": parsed_enode.username, "host": parsed_enode.hostname, "port": parsed_enode.port, "enode": enode}
             self.peers[enode] = node_info
@@ -171,7 +173,7 @@ class Node:
 
     def remove_peer(self, enode):
         if self.peers.pop(enode, None):
-            logging.debug(f"Node {self.id} removing peer at {enode}")
+            logger.debug(f"Node {self.id} removing peer at {enode}")
 
     def node_info(self):
         info = {"enode": self.enode, "id": self.id, "ip": self.host, "port": self.port}
@@ -182,6 +184,7 @@ class Node:
 
     def send_transaction(self, transaction):
         self.add_to_mempool(transaction)
+        return transaction.id
 
     def get_transaction(self, transaction_id):
         """

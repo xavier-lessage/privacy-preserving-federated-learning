@@ -1,10 +1,9 @@
-import copy
-import logging
-
 from PROJH402.src import constants
 from PROJH402.src.constants import MEMPOOL_SYNC_TAG, CHAIN_SYNC_TAG, BLOCK_REQUEST_TAG, DEBUG
 from PROJH402.src.utils import dict_to_transaction, transaction_to_dict, block_to_list
 
+import logging
+logger = logging.getLogger('w3')
 
 class MessageHandler:
     def __init__(self, node_server):
@@ -17,11 +16,11 @@ class MessageHandler:
         Returns a message containing the requested information
         """
         if not self.check_message_validity(msg):
-            logging.error("invalid message")
+            logger.error("invalid message")
             return
 
         if DEBUG:
-            logging.debug(msg)
+            logger.debug(msg)
 
         msg_type = msg["type"]
 
@@ -43,11 +42,11 @@ class MessageHandler:
 
     def handle_answer(self, msg):
         if not self.check_message_validity(msg):
-            logging.error("invalid message")
+            logger.error("invalid message")
             return
 
         if DEBUG:
-            logging.debug(f"Node {self.node.id} received {msg}")
+            logger.debug(f"Node {self.node.id} received {msg}")
 
         msg_type = msg["type"]
         if msg_type == CHAIN_SYNC_TAG:
@@ -64,10 +63,10 @@ class MessageHandler:
         if isinstance(message, dict):
             for key in mandatory_keys:
                 if key not in message:
-                    logging.error(f"Invalid key {message}")
+                    logger.error(f"Invalid key {message}")
                     return False
             return True
-        logging.error(f"Invalid message {message}")
+        logger.error(f"Invalid message {message}")
         return False
 
     def construct_message(self, data, msg_type, receiver=None):
@@ -85,7 +84,7 @@ class MessageHandler:
         if message["data"] == (last_block.get_header_hash(), last_block.total_difficulty):
             # Chains are synchronised
             if constants.DEBUG:
-                logging.debug(f"Node {self.node.id} is chain sync")
+                logger.debug(f"Node {self.node.id} is chain sync")
             return
 
         if last_block.total_difficulty <= message["data"][1]:
@@ -94,7 +93,7 @@ class MessageHandler:
             self.request_block(len(self.node.chain), message["sender"])
         else:
             if constants.DEBUG:
-                logging.debug(f"Node {self.node.id} has a current diff of {last_block.total_difficulty}")
+                logger.debug(f"Node {self.node.id} has a current diff of {last_block.total_difficulty}")
 
     def request_block(self, current_height, enode):
         """

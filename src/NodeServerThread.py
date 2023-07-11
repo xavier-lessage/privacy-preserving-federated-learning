@@ -48,7 +48,6 @@ class NodeServerThread(threading.Thread):
                 client_sock, client_address = self.sock.accept()
                 self.handle_connection(client_sock)
 
-
             except socket.timeout:
                 pass
 

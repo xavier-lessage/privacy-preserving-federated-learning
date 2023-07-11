@@ -1,5 +1,4 @@
 import copy
-import logging
 import threading
 from random import randint
 from time import time, sleep
@@ -8,11 +7,16 @@ from PROJH402.src import constants
 from PROJH402.src.Block import Block, State
 from PROJH402.src.utils import gen_enode
 
+import logging
+logger = logging.getLogger('poa')
+
+# Default parameters for Proof-of-Authority
 BLOCK_PERIOD = 150
 DIFF_NOTURN = 1
 DIFF_INTURN = 2
 DELAY_NOTURN = 40
 
+# Default genesis block when argument is not passed when creating node
 auth_signers = [gen_enode(i) for i in range(1,26)]
 initial_state = State()
 GENESIS_BLOCK = Block(0, 0000, [], auth_signers, 0, 0, 0, nonce = 1, state = initial_state)
@@ -43,22 +47,22 @@ class ProofOfAuthority:
 
             # Check Timestamp difference
             if chain[i].timestamp - last_block.timestamp < BLOCK_PERIOD // 2:
-                logging.error("Timestamp error in the blockchain")
-                logging.error(len(chain))
-                logging.error(f"Previous: {last_block.timestamp}, Current: {chain[i].timestamp}")
-                logging.error(chain)
+                logger.error("Timestamp error in the blockchain")
+                logger.error(len(chain))
+                logger.error(f"Previous: {last_block.timestamp}, Current: {chain[i].timestamp}")
+                logger.error(chain)
                 return False
 
             # Check the block
             elif not self.verify_block(chain[i], last_block.state):
-                logging.error("Block error")
-                logging.error(chain[i].__repr__())
+                logger.error("Block error")
+                logger.error(chain[i].__repr__())
                 return False
 
             # Check the parent hash
             elif chain[i].parent_hash != last_block_hash:
-                logging.error("Error in the blockchain")
-                logging.error(chain[i].parent_hash + "###" + last_block_hash)
+                logger.error("Error in the blockchain")
+                logger.error(chain[i].parent_hash + "###" + last_block_hash)
                 return False
             else:
                 last_block = chain[i]
@@ -78,10 +82,10 @@ class ProofOfAuthority:
             for transaction in block.data:
                 s.apply_transaction(transaction)
             if s.state_hash != block.state.state_hash:
-                logging.error(f"Invalid state {previous_state.state_variables}")
-                logging.error(f"{s.state_variables}")
-                logging.error(f"{block.state.state_variables}")
-                logging.error(f"{block.data}")
+                logger.error(f"Invalid state {previous_state.state_variables}")
+                logger.error(f"{s.state_variables}")
+                logger.error(f"{block.state.state_variables}")
+                logger.error(f"{block.data}")
                 return False
 
         # Check Total Difficulty
@@ -156,9 +160,9 @@ class ProofOfAuth():
             # Filter out transactions already on the blockchain
             data = [tx for tx in mempool if tx.id not in self.node.previous_transactions_id]
 
-            # Apply transactions to obtain the new state variables
-            for transaction in data:
-                previous_state.apply_transaction(transaction)
+            # # Apply transactions to obtain the new state variables
+            # for transaction in data:
+            #     previous_state.apply_transaction(transaction)
             
             # Generate the new block
             block = Block(
@@ -171,14 +175,18 @@ class ProofOfAuth():
                         previous_block.total_difficulty, 
                         state = previous_state)
 
+            # Apply transactions to obtain the new state variables
+            for transaction in block.data:
+                block.state.apply_transaction(transaction, block)
+
             # Update the blockchain and mempool
             self.node.chain.append(block)
             self.node.previous_transactions_id.update([tx.id for tx in block.data])
             self.node.mempool.clear()
 
-            logging.info(f"Block produced by Node {self.node.id}: ")
-            logging.info(f"{repr(block)}")
-            logging.info(f"{block.state.state_variables} \n")
+            logger.info(f"Block produced by Node {self.node.id}: ")
+            logger.info(f"{repr(block)}")
+            logger.info(f"{block.state.state_variables} \n")
 
     def step(self):
         if self.flag:
@@ -242,13 +250,13 @@ class ProofOfAuthThread(threading.Thread):
                               timestamp, difficulty, previous_block.total_difficulty, state_var=previous_state_var)
 
                 for transaction in block.data:
-                    block.state.apply_transaction(transaction)
+                    block.state.apply_transaction(transaction, block)
 
                 self.node.chain.append(block)
                 self.node.mempool.clear()
-                logging.info(f"Block produced by Node {self.node.id}: ")
-                logging.info(f"{repr(block)}")
-                logging.info(f"###{block.state.state_variables}### \n")
+                logger.info(f"Block produced by Node {self.node.id}: ")
+                logger.info(f"{repr(block)}")
+                logger.info(f"###{block.state.state_variables}### \n")
 
             self.timer.sleep(self.period - delay)
 

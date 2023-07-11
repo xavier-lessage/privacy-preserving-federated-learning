@@ -3,12 +3,12 @@ import sys
 
 sys.path.append("/home/eksander/toychain-argos/")
 
-from PROJH402.src.Node import Node
-from PROJH402.src.consensus.ProofOfAuth import ProofOfAuthority
-from PROJH402.src.Block import Block, State
-from PROJH402.src.Transaction import Transaction
-from PROJH402.src.constants import LOCALHOST
-from PROJH402.src.utils import gen_enode
+from toychain.src.Node import Node
+from toychain.src.consensus.ProofOfAuth import ProofOfAuthority
+from toychain.src.Block import Block, State
+from toychain.src.Transaction import Transaction
+from toychain.src.constants import LOCALHOST
+from toychain.src.utils import gen_enode
 
 
 auth_signers = [gen_enode(i) for i in range(1,4)]

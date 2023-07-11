@@ -1,4 +1,4 @@
-# PROJH402: Toy blockchain
+# toychain: Toy blockchain
 
 ## Architecture
 Every node is represented by a ``Node`` object. It has its own *(host, port)* and must have a *consensus* a initialisation parameter.

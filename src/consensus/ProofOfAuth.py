@@ -3,9 +3,9 @@ import threading
 from random import randint
 from time import time, sleep
 
-from PROJH402.src import constants
-from PROJH402.src.Block import Block, State
-from PROJH402.src.utils import gen_enode
+from toychain.src import constants
+from toychain.src.Block import Block, State
+from toychain.src.utils import gen_enode
 
 import logging
 logger = logging.getLogger('poa')

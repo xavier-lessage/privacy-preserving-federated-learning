@@ -2,8 +2,8 @@ import copy
 import threading
 from time import sleep
 
-from PROJH402.src.constants import MEMPOOL_SYNC_INTERVAL, CHAIN_SYNC_INTERVAL, MEMPOOL_SYNC_TAG, CHAIN_SYNC_TAG
-from PROJH402.src.utils import transaction_to_dict
+from toychain.src.constants import MEMPOOL_SYNC_INTERVAL, CHAIN_SYNC_INTERVAL, MEMPOOL_SYNC_TAG, CHAIN_SYNC_TAG
+from toychain.src.utils import transaction_to_dict
 
 
 # class ChainPinger(threading.Thread):

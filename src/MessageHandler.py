@@ -1,6 +1,6 @@
-from PROJH402.src import constants
-from PROJH402.src.constants import MEMPOOL_SYNC_TAG, CHAIN_SYNC_TAG, BLOCK_REQUEST_TAG, DEBUG
-from PROJH402.src.utils import dict_to_transaction, transaction_to_dict, block_to_list
+from toychain.src import constants
+from toychain.src.constants import MEMPOOL_SYNC_TAG, CHAIN_SYNC_TAG, BLOCK_REQUEST_TAG, DEBUG
+from toychain.src.utils import dict_to_transaction, transaction_to_dict, block_to_list
 
 import logging
 logger = logging.getLogger('w3')

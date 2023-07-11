@@ -1,7 +1,7 @@
 from random import randint
 from json import loads as jsload
 from copy import copy
-from PROJH402.src.utils import compute_hash, transaction_to_dict
+from toychain.src.utils import compute_hash, transaction_to_dict
 
 
 class Block:

@@ -10,8 +10,8 @@ import threading
 from random import randint
 from time import time
 
-from PROJH402.src import constants
-from PROJH402.src.Block import Block
+from toychain.src import constants
+from toychain.src.Block import Block
 
 MINING_DIFFICULTY = 18  # Approx One block every 7 seconds
 GENESIS_BLOCK = Block(0, 0000000, [], 0, 0, MINING_DIFFICULTY, 0, 0)

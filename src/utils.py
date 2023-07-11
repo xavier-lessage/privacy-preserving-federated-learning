@@ -1,6 +1,6 @@
 from hashlib import sha256
 
-from PROJH402.src.Transaction import Transaction
+from toychain.src.Transaction import Transaction
 
 def compute_hash(list):
     """

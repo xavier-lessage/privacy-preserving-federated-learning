@@ -7,9 +7,9 @@ import urllib.parse
 from queue import Queue
 from time import sleep
 
-from PROJH402.src import constants
-from PROJH402.src.MessageHandler import MessageHandler
-from PROJH402.src.constants import ENCODING
+from toychain.src import constants
+from toychain.src.MessageHandler import MessageHandler
+from toychain.src.constants import ENCODING
 
 
 class NodeServerThread(threading.Thread):

@@ -2,7 +2,10 @@ from random import randint
 from json import loads as jsload
 from copy import copy
 from toychain.src.utils import compute_hash, transaction_to_dict
+from os import environ
 
+import logging
+logger = logging.getLogger('sc')
 
 class Block:
     """
@@ -70,12 +73,24 @@ class Block:
 
 class StateMixin:
     @property
+    def getBalances(self):
+        return self.balances
+    
+    @property
+    def getN(self):
+        return self.n
+        
+    @property
+    def call(self):
+        return None
+    
+    @property
     def state_variables(self):
-        return {k: v for k, v in vars(self).items() if not (k.startswith('_') or k == 'msg' or k == 'block')}
+        return {k: v for k, v in vars(self).items() if not (k.startswith('_') or k == 'msg' or k == 'block' or k == 'private')}
     
     @property
     def state(self):
-        return {k: v for k, v in vars(self).items() if not (k.startswith('_') or k == 'msg' or k == 'block')}
+        return {k: v for k, v in vars(self).items() if not (k.startswith('_') or k == 'msg' or k == 'block' or k == 'private')}
 
     @property
     def state_hash(self):
@@ -116,6 +131,7 @@ class State(StateMixin):
             for var, value in state_variables.items(): setattr(self, var, value)     
 
         else:
+            self.private     = {}
             self.n           = 0
             self.balances    = {}
 
@@ -136,9 +152,9 @@ class State(StateMixin):
             'qlty': qlty,
             'json': json,
             'id': len(self.patches),
-            'maxw': 5,
+            'maxw': int(environ['MAXWORKERS']),
             'totw': 0,
-            'last_assign': 0,
+            'last_assign': -1,
             'epoch': self.epoch(0,0,[],[],[],self.linearDemand(0))
         }
     
@@ -158,13 +174,13 @@ class State(StateMixin):
     def findByPos(self, _x, _y):
         for i in range(len(self.patches)):
             if _x == self.patches[i]['x'] and _y == self.patches[i]['y']:
-                return i
-        return 9999
+                return i, self.patches[i]
+        return 9999, None
 
     def updatePatch(self, x, y, qtty, util, qlty, json):
         # x, y, qtty, util, qlty, json, id, maxw, totw, last_assign, epoch
 
-        i = self.findByPos(x, y)
+        i, _ = self.findByPos(x, y)
 
         if i < 9999:
             self.patches[i]["qtty"] = qtty
@@ -178,7 +194,7 @@ class State(StateMixin):
 
     def dropResource(self, x, y, qtty, util, qlty, json, Q, TC):
         
-        i = self.findByPos(x, y)
+        i, _ = self.findByPos(x, y)
 
         if i < 9999:
 
@@ -195,10 +211,12 @@ class State(StateMixin):
             self.patches[i]['epoch']['TC'].append(TC)
             self.patches[i]['epoch']['ATC'].append(TC/Q)
 
+            logger.info(f"Drop #{len(self.patches[i]['epoch']['Q'])}/{self.patches[i]['totw']} @ Epoch #{self.patches[i]['epoch']['number']}")
             if len(self.patches[i]['epoch']['Q']) >= self.patches[i]['totw']:
                 TQ = sum(self.patches[i]['epoch']['Q'])
 
                 # Init new epoch
+                logger.info(f"New epoch #{self.patches[i]['epoch']['number']+1} started")
                 self.allepochs.setdefault(i, []).append(copy(self.patches[i]['epoch']))
                 self.epochs[i] = copy(self.patches[i]['epoch'])
                 self.patches[i]['epoch']['number'] += 1
@@ -212,18 +230,20 @@ class State(StateMixin):
 
     def assignPatch(self):
         for i, patch in enumerate(self.patches):
-            if patch['totw'] < patch['maxw']:
+            if patch['totw'] < patch['maxw'] and patch['epoch']['number']>patch['last_assign']:
                 self.robots[self.msg.sender]['task'] = patch['id']
                 self.patches[i]["totw"] += 1
+                self.patches[i]["last_assign"] = patch['epoch']['number']
 
     def joinPatch(self, x, y):
 
-        i = self.findByPos(x, y)
+        i, patch = self.findByPos(x, y)
 
-        if i < 9999:
-            if self.patches[i]['totw'] < self.patches[i]['maxw']:
-                self.robots[self.msg.sender]['task'] = self.patches[i]['id']
-                self.patches[i]["totw"] += 1
+        print(f"joining {patch['epoch']['number']} {patch['last_assign']}")
+        if patch and patch['totw'] < patch['maxw'] and patch['epoch']['number']>patch['last_assign']:
+            self.robots[self.msg.sender]['task'] = self.patches[i]['id']
+            self.patches[i]["totw"] += 1
+            self.patches[i]["last_assign"] = patch['epoch']['number']
 
     def leavePatch(self):
         i = self.robots[self.msg.sender]['task']
@@ -244,7 +264,7 @@ class State(StateMixin):
         
     def getAvailiable(self):
         for i, patch in enumerate(self.patches):
-            if patch['totw'] < patch['maxw']:
+            if patch['totw'] < patch['maxw'] and patch['epoch']['number']>patch['last_assign']:
                 return True
         return False
 

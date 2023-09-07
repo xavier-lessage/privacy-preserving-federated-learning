@@ -1,13 +1,109 @@
 import urllib.parse
 
 from toychain.src.Block import Block
+from toychain.src.Transaction import Transaction
 from toychain.src.NodeServerThread import NodeServerThread
 from toychain.src.Pingers import ChainPinger, MemPoolPinger
 from toychain.src.constants import ENCODING, CHAIN_SYNC_INTERVAL, MEMPOOL_SYNC_INTERVAL, DEBUG
 from toychain.src.utils import CustomTimer, create_block_from_list
-
 import logging
 logger = logging.getLogger('w3')
+
+from multiprocessing import Process
+
+import numpy as np
+
+from collections import OrderedDict
+import flwr as fl
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.utils.data import DataLoader
+from torchvision.datasets import CIFAR10
+from torchvision.transforms import Compose, Normalize, ToTensor
+from tqdm import tqdm
+
+DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+class Net(nn.Module):
+    """Model (simple CNN adapted from 'PyTorch: A 60 Minute Blitz')"""
+
+    def __init__(self) -> None:
+        super(Net, self).__init__()
+        self.conv1 = nn.Conv2d(3, 6, 5)
+        self.pool = nn.MaxPool2d(2, 2)
+        self.conv2 = nn.Conv2d(6, 16, 5)
+        self.fc1 = nn.Linear(16 * 5 * 5, 120)
+        self.fc2 = nn.Linear(120, 84)
+        self.fc3 = nn.Linear(84, 10)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = x.view(-1, 16 * 5 * 5)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        return self.fc3(x)
+
+
+def train(net, trainloader, epochs):
+    """Train the model on the training set."""
+    criterion = torch.nn.CrossEntropyLoss()
+    optimizer = torch.optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+    for _ in range(epochs):
+        for images, labels in tqdm(trainloader):
+            optimizer.zero_grad()
+            criterion(net(images.to(DEVICE)), labels.to(DEVICE)).backward()
+            optimizer.step()
+
+
+def test(net, testloader):
+    """Validate the model on the test set."""
+    criterion = torch.nn.CrossEntropyLoss()
+    correct, loss = 0, 0.0
+    with torch.no_grad():
+        for images, labels in tqdm(testloader):
+            outputs = net(images.to(DEVICE))
+            labels = labels.to(DEVICE)
+            loss += criterion(outputs, labels).item()
+            correct += (torch.max(outputs.data, 1)[1] == labels).sum().item()
+    accuracy = correct / len(testloader.dataset)
+    return loss, accuracy
+
+
+def load_data():
+    """Load CIFAR-10 (training and test set)."""
+    trf = Compose([ToTensor(), Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+    trainset = CIFAR10("./data", train=True, download=True, transform=trf)
+    testset = CIFAR10("./data", train=False, download=True, transform=trf)
+    return DataLoader(trainset, batch_size=32, shuffle=True), DataLoader(testset)
+
+
+
+net = Net().to(DEVICE)
+trainloader, testloader = load_data()
+
+
+class FlowerClient(fl.client.NumPyClient):
+    def get_parameters(self, config):
+        return [val.cpu().numpy() for _, val in net.state_dict().items()]
+
+    def set_parameters(self, parameters):
+        params_dict = zip(net.state_dict().keys(), parameters)
+        state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
+        net.load_state_dict(state_dict, strict=True)
+
+    def fit(self, parameters, config):
+        self.set_parameters(parameters)
+        train(net, trainloader, epochs=1)
+        return self.get_parameters(config={}), len(trainloader.dataset), {}
+
+    def evaluate(self, parameters, config):
+        self.set_parameters(parameters)
+        loss, accuracy = test(net, testloader)
+        return float(loss), len(testloader.dataset), {'accuracy': accuracy}
+
 
 class Node:
     """
@@ -47,6 +143,9 @@ class Node:
         self.syncing = False
         self.mining = False
         self.mining_thread = consensus.block_generation(self)
+
+        # Flower (federated learning)
+        self.flower_client = FlowerClient()
     
 
     @property
@@ -237,3 +336,50 @@ class Node:
         if port == 0:
             port = 1233 + id
         return f"enode://{id}@{host}:{port}"
+
+    def flower_fit_helper(self, timestamp):
+        old_params = self.flower_client.get_parameters({})
+        #print(old_params)
+        new_params = self.flower_client.fit(old_params, {})
+
+        # TODO: Create the blockchain tx here!
+        #print([type(a) for a in new_params])
+        #print(np.array(new_params[1]).flatten()[0:5])
+
+        #txdata = {'function': 'storeParameters', 'inputs': [np.array(new_params[1]).flatten()[0:5]]}
+        txdata = {'function': 'storeParameters', 'inputs': [1]}
+
+        # TODO: update timestamp
+        nonce = 1
+        print("Sending transaction")
+        tx = Transaction(sender = self.enode, receiver = 2, value = 0, data = txdata, nonce = nonce, timestamp = 1000)
+        self.send_transaction(tx)
+
+        #print(new_params)
+        return new_params
+
+    def flower_fit(self, timestamp):
+        txdata = {'function': 'storeParameters', 'inputs': [1]}
+        nonce = 1
+        print("Sending transaction")
+        tx = Transaction(sender = self.enode, receiver = 2, value = 0, data = txdata, nonce = nonce, timestamp = 1000)
+        self.send_transaction(tx)
+
+    def flower_fit(self, timestamp):
+        client_process = Process(target=self.flower_fit_helper, args=(timestamp,))
+        client_process.start()
+
+
+
+    def start_flower_client_helper(self):
+        print("Starting Flower client")
+        fl.client.start_numpy_client(
+            server_address="0.0.0.0:8000",
+            client=self.flower_client)
+
+    def start_flower_client(self):
+        client_process = Process(target=self.start_flower_client_helper)
+        client_process.start()
+
+    def get_flower_parameters(self):
+        return self.flower_client.get_parameters(config={})

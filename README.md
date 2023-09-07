@@ -1,54 +1,15 @@
-# toychain: Toy blockchain
+# Flower-blockchain integration
 
-## Architecture
-Every node is represented by a ``Node`` object. It has its own *(host, port)* and must have a *consensus* a initialisation parameter.
+Proof-of-concept for integrating federated learning with blockchain technology. To do so, we are using the following two frameworks:
 
+- Flower federated learning framework (https://flower.dev/)
+- Toychain blockchain simulator (https://github.com/uldenis/PROJH402)
 
-##### Required methods to implement a new consensus
+## Run simulation
 
-Every consensus needs the following methods/attributes:
+Execute `flower_test.py` in the folder `test`.
 
-- ``verify_chain(chain, previous_state)``: Method that verifies that the specified ``chain`` respects the consensus. The ``previous_state`` is the state of the previous block.
-- ``self.block_generation``: Specified in the constructor, this is a thread object that will produce the blocks respecting the consensus.
-- ``self.genesis``: Genesis block that will be the first block of every node using this consensus.
+## Credits
 
-### Custom Timer
-The whole project is based on a custom timer. Each node possess its own ``CustomTimer``. At each control step of one robot, the timer is incremented by 1. 
-
-
-
-## Options
-
-### Consensus options
-The consensus options are contained in their own file
-
-##### Proof of work
-``MINING_DIFFICULTY``: This represents the difficulty of mining and is thus related to the time taken to produce a block
-
-``ProofOfWork.trust``: Determines if the state should be checked or not when verifying a chain 
-
-##### Proof of authority
-``BLOCK_PERIOD``: Minimum difference between two consecutive block’s timestamps.
-
-``DIFF_INTURN``: Block score (difficulty) for blocks containing in-turn signatures (by the preferred producer of this turn)
-
-``DIFF_NOTURN``: Block score (difficulty) for blocks containing out-of-turn signatures (not by the preferred producer of this turn)
-
-``ProofOfAuth.trust``: Determines if the state should be checked or not when verifying a chain 
-
-The __genesis block__ is organised this way:
-
-- miner_id contains the authorised signers list
-### Other options
-All the other options are contained in the ``constants.py`` file.
-
-``MEMPOOL_SYNC_INTERVAL``: Time interval between two synchronisation process in the ``MempoolPinger``
-
-``CHAIN_SYNC_INTERVAL``: Time interval between two synchronisation process in the ``ChainPinger``
-
-
-
-
-
-
+The toychain has been developed by Ulysse Denis (https://github.com/uldenis/PROJH402). In this projected, we are using a modified version based on Alexandre Pacheco's sync branch (https://github.com/teksander/toychain/tree/sync).
 

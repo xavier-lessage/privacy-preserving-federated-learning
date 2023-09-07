@@ -3,6 +3,7 @@ from json import loads as jsload
 from copy import copy
 from toychain.src.utils import compute_hash, transaction_to_dict
 from os import environ
+import numpy as np
 
 import logging
 logger = logging.getLogger('sc')
@@ -68,8 +69,8 @@ class Block:
         """
         Translate the block object in a string object
         """
-        return f"## H: {self.height}, D: {self.difficulty}, TD: {self.total_difficulty}, P: {self.miner_id}, BH: {self.hash[0:5]}, TS:{self.timestamp}, #T:{len(self.data)}, SH:{self.state.state_hash[0:5]}##"
-
+        #return f"## Height: {self.height}, Difficulty: {self.difficulty}, Total difficulty: {self.total_difficulty}, P: {self.miner_id}, BH: {self.hash[0:5]}, TS:{self.timestamp}, #T:{len(self.data)}, SH:{self.state.state_hash[0:5]}##"
+        return f"## Height: {self.height}, Difficulty: {self.difficulty}, Total difficulty: {self.total_difficulty}, Block Hash: {self.hash[0:5]}, Timestamp: {self.timestamp / 10.0} seconds, Number of tx's: {len(self.data)}, ##"
 
 class StateMixin:
     @property
@@ -119,8 +120,10 @@ class StateMixin:
             function = getattr(self, tx.data.get("function"))
             inputs   = tx.data.get("inputs")
             try:
+                print("Applying function")
                 function(*inputs)
             except Exception as e:
+                print("Something went wrong")
                 raise e
 
 class State(StateMixin):
@@ -131,6 +134,7 @@ class State(StateMixin):
             for var, value in state_variables.items(): setattr(self, var, value)     
 
         else:
+            self.params_list = np.array([])
             self.private     = {}
             self.n           = 0
             self.balances    = {}
@@ -140,8 +144,21 @@ class State(StateMixin):
             self.epochs      = {}
             self.allepochs   = {}
 
+    
+    def storeParameters(self, params):
+        print("I am storing parameters")
+        
+        self.params_list = np.append(self.params_list, np.array(params), axis=0) 
+
+        #self.params_list.append(params)
+
+    def getParamsList(self, params):
+        return self.params_list
+
+
     def robot(self, task = -1):
         return {'task': task}
+
     
     def patch(self, x, y, qtty, util, qlty, json):
         return {
@@ -275,6 +292,7 @@ class State(StateMixin):
     def getAllEpochs(self):
         # epochs = [patch['epoch'] for patch in self.patches]
         return self.allepochs
+
 
     def linearDemand(self, Q):
         P = 0

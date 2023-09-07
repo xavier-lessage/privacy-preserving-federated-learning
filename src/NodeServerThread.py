@@ -110,9 +110,17 @@ class NodeServerThread(threading.Thread):
 
     def receive(self, sock):
         data = []
-        packet = sock.recv(65536)
-        if len(packet) > self.max_packet:
-            # print('New max packet:', len(packet))
-            self.max_packet = len(packet)
-        data.append(packet)
+        
+        while True:
+            print("receiving")
+            packet = sock.recv(4096)
+            print("received")
+            if len(packet) > self.max_packet:
+                print('New max packet:', len(packet))
+                self.max_packet = len(packet)
+            if not packet: break
+            print("appending")
+            data.append(packet)
+            print("appended")
+        print("Ready")
         return b"".join(data)

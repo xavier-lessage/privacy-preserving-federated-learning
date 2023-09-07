@@ -157,6 +157,8 @@ class ProofOfAuth():
             previous_state = previous_block.state
             mempool = list((self.node.mempool.copy().values()))
 
+            print(mempool)
+
             # Filter out transactions already on the blockchain
             data = [tx for tx in mempool if tx.id not in self.node.previous_transactions_id]
 

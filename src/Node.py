@@ -16,6 +16,8 @@ import numpy as np
 from collections import OrderedDict
 import flwr as fl
 
+import hashlib
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -146,6 +148,11 @@ class Node:
 
         # Flower (federated learning)
         self.flower_client = FlowerClient()
+
+        self.h = hashlib.new('sha256')
+        self.hashing = True
+
+
     
 
     @property
@@ -346,8 +353,12 @@ class Node:
         #print([type(a) for a in new_params])
         #print(np.array(new_params[1]).flatten()[0:5])
 
-        #txdata = {'function': 'storeParameters', 'inputs': [np.array(new_params[1]).flatten()[0:5]]}
-        txdata = {'function': 'storeParameters', 'inputs': [1]}
+
+        txdata = {'function': 'storeParameters', 'inputs': [new_params]}
+        if self.hashing:
+            #b = new_params.view(numpy.uint8)
+            new_params = hashlib.sha1(str(new_params).encode('utf-8')).hexdigest()
+            txdata = {'function': 'storeParameters', 'inputs': [new_params]}
 
         # TODO: update timestamp
         nonce = 1

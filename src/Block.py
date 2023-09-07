@@ -134,7 +134,7 @@ class State(StateMixin):
             for var, value in state_variables.items(): setattr(self, var, value)     
 
         else:
-            self.params_list = np.array([])
+            self.params_list = []
             self.private     = {}
             self.n           = 0
             self.balances    = {}
@@ -148,7 +148,7 @@ class State(StateMixin):
     def storeParameters(self, params):
         print("I am storing parameters")
         
-        self.params_list = np.append(self.params_list, np.array(params), axis=0) 
+        self.params_list.append(params) 
 
         #self.params_list.append(params)
 

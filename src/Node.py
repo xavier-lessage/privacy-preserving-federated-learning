@@ -339,6 +339,7 @@ class Node:
         new_params = self.flower_client.fit(old_params, {})
 
 
+
         self.save_params(new_params)
 
         txdata = {'function': 'storeParameters', 'inputs': [new_params]}

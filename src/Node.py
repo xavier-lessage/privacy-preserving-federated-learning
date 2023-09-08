@@ -40,6 +40,7 @@ class Net(nn.Module):
         self.fc2 = nn.Linear(120, 84)
         self.fc3 = nn.Linear(84, 10)
 
+ 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
@@ -78,10 +79,12 @@ def load_data():
     """Load CIFAR-10 (training and test set)."""
     trf = Compose([ToTensor(), Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
     trainset = CIFAR10("./data", train=True, download=True, transform=trf)
+    trainset.data = trainset.data[:32]
+    trainset.targets = trainset.targets[:32]
     testset = CIFAR10("./data", train=False, download=True, transform=trf)
+    testset.data = testset.data[:32]
+    testset.targets = testset.targets[:32]
     return DataLoader(trainset, batch_size=32, shuffle=True), DataLoader(testset)
-
-
 
 net = Net().to(DEVICE)
 trainloader, testloader = load_data()

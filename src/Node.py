@@ -1,4 +1,5 @@
 import urllib.parse
+from torch.utils.data import DataLoader, TensorDataset
 
 from toychain.src.Block import Block
 from toychain.src.Transaction import Transaction
@@ -33,58 +34,43 @@ class Net(nn.Module):
 
     def __init__(self) -> None:
         super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(3, 6, 5)
-        self.pool = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(6, 16, 5)
-        self.fc1 = nn.Linear(16 * 5 * 5, 120)
-        self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, 10)
-
+        self.fc1 = nn.Linear(5, 2)
  
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
-        x = x.view(-1, 16 * 5 * 5)
         x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        return self.fc3(x)
-
+        return x
 
 def train(net, trainloader, epochs):
     """Train the model on the training set."""
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
     for _ in range(epochs):
-        for images, labels in tqdm(trainloader):
+        for data, labels in trainloader:
             optimizer.zero_grad()
-            criterion(net(images.to(DEVICE)), labels.to(DEVICE)).backward()
+            outputs = net(data)
+            loss = criterion(outputs, labels)
+            loss.backward()
             optimizer.step()
-
 
 def test(net, testloader):
     """Validate the model on the test set."""
     criterion = torch.nn.CrossEntropyLoss()
     correct, loss = 0, 0.0
     with torch.no_grad():
-        for images, labels in tqdm(testloader):
-            outputs = net(images.to(DEVICE))
-            labels = labels.to(DEVICE)
+        for data, labels in testloader:
+            outputs = net(data)
             loss += criterion(outputs, labels).item()
-            correct += (torch.max(outputs.data, 1)[1] == labels).sum().item()
+            correct += (torch.max(outputs, 1)[1] == labels).sum().item()
     accuracy = correct / len(testloader.dataset)
     return loss, accuracy
 
-
 def load_data():
-    """Load CIFAR-10 (training and test set)."""
-    trf = Compose([ToTensor(), Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-    trainset = CIFAR10("./data", train=True, download=True, transform=trf)
-    trainset.data = trainset.data[:32]
-    trainset.targets = trainset.targets[:32]
-    testset = CIFAR10("./data", train=False, download=True, transform=trf)
-    testset.data = testset.data[:32]
-    testset.targets = testset.targets[:32]
-    return DataLoader(trainset, batch_size=32, shuffle=True), DataLoader(testset)
+    custom_data = torch.randn(32, 5)
+    classification_labels = torch.randint(0, 2, (32,))
+    dataset = TensorDataset(custom_data, classification_labels)
+    dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
+
+    return dataloader, dataloader
 
 net = Net().to(DEVICE)
 trainloader, testloader = load_data()
@@ -349,6 +335,7 @@ class Node:
 
     def flower_fit_helper(self, timestamp):
         old_params = self.flower_client.get_parameters({})
+        # print(old_params)
         new_params = self.flower_client.fit(old_params, {})
 
 

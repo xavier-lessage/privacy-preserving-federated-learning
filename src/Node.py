@@ -50,7 +50,6 @@ class Net(nn.Module):
         return self.fc3(x)
 
 
-
 def train(net, trainloader, epochs):
     """Train the model on the training set."""
     criterion = torch.nn.CrossEntropyLoss()

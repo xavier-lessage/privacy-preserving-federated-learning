@@ -16,6 +16,16 @@ import numpy as np
 from collections import OrderedDict
 import flwr as fl
 
+from flwr.common import (
+    FitRes,
+    Status,
+    Code,
+    ndarrays_to_parameters,
+    parameters_to_ndarrays,
+)
+
+from flwr.server.strategy.aggregate import aggregate, weighted_loss_avg
+
 import hashlib
 
 import torch
@@ -153,7 +163,7 @@ class Node:
         self.flower_client = FlowerClient()
 
         self.h = hashlib.new('sha256')
-        self.hashing = True
+        self.hashing = False
 
 
     
@@ -349,12 +359,23 @@ class Node:
 
     def flower_fit_helper(self, timestamp):
         old_params = self.flower_client.get_parameters({})
-        new_params = self.flower_client.fit(old_params, {})
+        
+        fit_result = self.flower_client.fit(old_params, {})[:2]
 
+        new_params = [1,2,3,4]
+        num_examples = 2
 
-        self.save_params(new_params)
+        fit_result = (new_params, num_examples)
 
-        txdata = {'function': 'storeParameters', 'inputs': [new_params]}
+        ret = [fit_result]
+
+        parameters_aggregated = aggregate(ret)
+
+        #new_params = ndarrays_to_parameters(new_params) 
+
+        #self.save_params(new_params)
+
+        txdata = {'function': 'storeParameters', 'inputs': [parameters_aggregated]}
         if self.hashing:
             #b = new_params.view(numpy.uint8)
             new_params = hashlib.sha1(str(new_params).encode('utf-8')).hexdigest()

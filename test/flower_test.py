@@ -65,13 +65,14 @@ import time
 if __name__ == '__main__':
 
     # FlowerServer (will be removed later)
-    flower_server_thread = Process(target=init_flower_server, name="FlowerServerThread", args=())
-    flower_server_thread.start()
+    #flower_server_thread = Process(target=init_flower_server, name="FlowerServerThread", args=())
+    #flower_server_thread.start()
 
 
     # Flower clients
     for node in allnodes:
         node.start_tcp()
+        time.sleep(0.1)
         node.start_mining()
         #node.start_flower_client() # Start Flower client
 

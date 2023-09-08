@@ -346,13 +346,10 @@ class Node:
 
     def flower_fit_helper(self, timestamp):
         old_params = self.flower_client.get_parameters({})
-        #print(old_params)
         new_params = self.flower_client.fit(old_params, {})
 
-        # TODO: Create the blockchain tx here!
-        #print([type(a) for a in new_params])
-        #print(np.array(new_params[1]).flatten()[0:5])
 
+        self.save_params(new_params)
 
         txdata = {'function': 'storeParameters', 'inputs': [new_params]}
         if self.hashing:
@@ -380,8 +377,6 @@ class Node:
         client_process = Process(target=self.flower_fit_helper, args=(timestamp,))
         client_process.start()
 
-
-
     def start_flower_client_helper(self):
         print("Starting Flower client")
         fl.client.start_numpy_client(
@@ -394,3 +389,27 @@ class Node:
 
     def get_flower_parameters(self):
         return self.flower_client.get_parameters(config={})
+
+    def retrieve_unhashed_params(self):
+        pass
+
+        
+    def save_params(self, params):
+        with open('params.npy', 'wb') as f:
+            np.save(f, np.array([1, 2]))
+
+    def read_params(self):
+        """
+        Read parameters of a model from a NumPy file and return them
+        """
+
+        with open('params.npy', 'rb') as f:
+            params = np.load(f)
+        return params
+
+
+    def aggregate_model(self):
+        """
+        Aggregate model parameters based on a Numpy file
+        """
+        pass

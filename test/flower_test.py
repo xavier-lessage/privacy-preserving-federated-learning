@@ -85,7 +85,7 @@ if __name__ == '__main__':
     step = 1
 
 
-    node.flower_fit(curr_step)
+    #node.flower_fit(curr_step)
 
 
     while True:
@@ -103,6 +103,7 @@ if __name__ == '__main__':
             #nonce = 1
             #tx = Transaction(sender = node1.enode, receiver = 2, value = 0, data = txdata, nonce = nonce, timestamp = curr_step)
             node1.flower_fit_helper(1000)
+            node2.flower_fit_helper(1000)
 
             # Display the final blockchains at the end of the simulation
             # print('Node 1')

@@ -31,7 +31,7 @@ CONSENSUS = ProofOfAuthority(genesis = GENESIS_BLOCK)
 # Create the nodes with (id, host, port, consensus_protocol)
 node1 = Node(1, LOCALHOST, 1234, CONSENSUS)
 node2 = Node(2, LOCALHOST, 1235, CONSENSUS)
-node3 = Node(3, LOCALHOST, 1236, CONSENSUS)
+#node3 = Node(3, LOCALHOST, 1236, CONSENSUS)
 
 #allnodes = [node1, node2, node3]
 allnodes = [node1, node2]
@@ -57,16 +57,12 @@ def init_network():
     #node1.add_peer(node3.enode)
     node2.add_peer(node1.enode)
     #node2.add_peer(node3.enode)
-    node3.add_peer(node1.enode)
-    node3.add_peer(node2.enode)
+    #node3.add_peer(node1.enode)
+    #node3.add_peer(node2.enode)
     
 
 import time
 if __name__ == '__main__':
-
-    # FlowerServer (will be removed later)
-    #flower_server_thread = Process(target=init_flower_server, name="FlowerServerThread", args=())
-    #flower_server_thread.start()
 
 
     # Flower clients
@@ -74,7 +70,6 @@ if __name__ == '__main__':
         node.start_tcp()
         time.sleep(0.1)
         node.start_mining()
-        #node.start_flower_client() # Start Flower client
 
 
     # Initialize the blockchain framework (connect all nodes to each other)
@@ -85,37 +80,33 @@ if __name__ == '__main__':
     curr_step = 0
     step = 1
 
-
-    #node.flower_fit(curr_step)
-
-
     while True:
 
         for node in allnodes:
             node.step()
 
-        time.sleep(0.05)
+        time.sleep(0.1)
         curr_step += step
 
         if (curr_step % 100) == 0:
-            print(curr_step)
+            print("Time (s):", curr_step / 10.0)
 
-            #txdata = {'function': 'storeParameters', 'inputs': [1]}
-            #nonce = 1
-            #tx = Transaction(sender = node1.enode, receiver = 2, value = 0, data = txdata, nonce = nonce, timestamp = curr_step)
             node1.flower_fit_helper(1000)
             node2.flower_fit_helper(1000)
+            #node3.flower_fit_helper(1000, 3)
 
-            # Display the final blockchains at the end of the simulation
-            # print('Node 1')
-            # print(node1.display_chain())
-            # print('Node 2')
-            # print(node2.display_chain())
-            # print('Node 3')
-            # print(node3.display_chain())
 
-            #print(node.get_flower_parameters()[:5])
+        if (curr_step % 200) == 0: 
 
+            txdata = {'function': 'aggregateParameters', 'inputs': []}
+            nonce = 3
+            tx = Transaction(sender = node1.enode, receiver = 2, value = 0, data = txdata, nonce = nonce, timestamp = 1000)
+            node1.send_transaction(tx)
+
+
+        #if (curr_step % 500) == 0:
+
+        #    print(node1.sc.getAggregatedParameters())
 
         if curr_step > max_steps:
             break

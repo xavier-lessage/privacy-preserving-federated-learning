@@ -1,4 +1,5 @@
 import urllib.parse
+from torch.utils.data import DataLoader, TensorDataset
 
 from toychain.src.Block import Block
 from toychain.src.Transaction import Transaction
@@ -10,6 +11,8 @@ import logging
 logger = logging.getLogger('w3')
 
 from multiprocessing import Process
+
+import pprint
 
 import numpy as np
 
@@ -43,58 +46,43 @@ class Net(nn.Module):
 
     def __init__(self) -> None:
         super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(3, 6, 5)
-        self.pool = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(6, 16, 5)
-        self.fc1 = nn.Linear(16 * 5 * 5, 120)
-        self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, 10)
-
+        self.fc1 = nn.Linear(5, 2)
  
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
-        x = x.view(-1, 16 * 5 * 5)
         x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        return self.fc3(x)
-
+        return x
 
 def train(net, trainloader, epochs):
     """Train the model on the training set."""
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
     for _ in range(epochs):
-        for images, labels in tqdm(trainloader):
+        for data, labels in trainloader:
             optimizer.zero_grad()
-            criterion(net(images.to(DEVICE)), labels.to(DEVICE)).backward()
+            outputs = net(data)
+            loss = criterion(outputs, labels)
+            loss.backward()
             optimizer.step()
-
 
 def test(net, testloader):
     """Validate the model on the test set."""
     criterion = torch.nn.CrossEntropyLoss()
     correct, loss = 0, 0.0
     with torch.no_grad():
-        for images, labels in tqdm(testloader):
-            outputs = net(images.to(DEVICE))
-            labels = labels.to(DEVICE)
+        for data, labels in testloader:
+            outputs = net(data)
             loss += criterion(outputs, labels).item()
-            correct += (torch.max(outputs.data, 1)[1] == labels).sum().item()
+            correct += (torch.max(outputs, 1)[1] == labels).sum().item()
     accuracy = correct / len(testloader.dataset)
     return loss, accuracy
 
-
 def load_data():
-    """Load CIFAR-10 (training and test set)."""
-    trf = Compose([ToTensor(), Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-    trainset = CIFAR10("./data", train=True, download=True, transform=trf)
-    trainset.data = trainset.data[:32]
-    trainset.targets = trainset.targets[:32]
-    testset = CIFAR10("./data", train=False, download=True, transform=trf)
-    testset.data = testset.data[:32]
-    testset.targets = testset.targets[:32]
-    return DataLoader(trainset, batch_size=32, shuffle=True), DataLoader(testset)
+    custom_data = torch.randn(32, 5)
+    classification_labels = torch.randint(0, 2, (32,))
+    dataset = TensorDataset(custom_data, classification_labels)
+    dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
+
+    return dataloader, dataloader
 
 net = Net().to(DEVICE)
 trainloader, testloader = load_data()
@@ -182,7 +170,7 @@ class Node:
         self.mining_thread.step()
     
     def start_mining(self):
-        print(f"Node {self.id} started mining")
+        print(f"Device {self.id} started blockchain mining")
         self.mining_thread.start()
         # x = threading.Thread(target=self.mining_thread.start())
         # x.start()
@@ -191,7 +179,7 @@ class Node:
     def stop_mining(self):
         self.mining_thread.stop()
         self.mining = False
-        print("Node " + str(self.id) + " stopped mining")
+        print("Device " + str(self.id) + " stopped mining")
 
     def start_tcp(self):
         """
@@ -247,7 +235,7 @@ class Node:
             chain_repr(list[str]): list of block representation from a partial chain received
             height: the height at which the partial chain is supposed to be inserted
         """
-        logger.info("Merging chains")
+        #logger.info("Merging chains")
         chain = []
         # Reconstruct the partial chain
         for block_repr in chain_repr:
@@ -276,9 +264,9 @@ class Node:
             # Replace self chain with the other chain
             del self.chain[height+1:]
             self.chain.extend(chain)
-            logger.info(f"Node {self.id} has updated its chain, total difficulty : {self.get_block('last').total_difficulty}, n = {chain[-1].state.state_variables.get('n')}")
-            for block in self.chain[-5:]:
-                logger.info(f"{block.__repr__()}   ##{len(block.data)}##  {block.state.state_variables}")
+            #logger.info(f"Node {self.id} has updated its chain, total difficulty : {self.get_block('last').total_difficulty}, n = {chain[-1].state.state_variables.get('n')}")
+            #for block in self.chain[-5:]:
+            #    logger.info(f"{block.__repr__()}   ##{len(block.data)}##  {block.state.state_variables}")
         else:
             logger.info("Chain does not fit here")
 
@@ -357,39 +345,35 @@ class Node:
             port = 1233 + id
         return f"enode://{id}@{host}:{port}"
 
-    def flower_fit_helper(self, timestamp):
+
+    def flower_fit_helper(self, timestamp, dummy_data=None):
         old_params = self.flower_client.get_parameters({})
         
         fit_result = self.flower_client.fit(old_params, {})[:2]
 
-        new_params = [1,2,3,4]
-        num_examples = 2
+        #print(fit_result[0])
 
-        fit_result = (new_params, num_examples)
+        # For quick testing
+        
+        if dummy_data:
+            new_params = [dummy_data] * 4
+            num_examples = 10 * dummy_data
+            fit_result = (new_params, num_examples)
 
-        ret = [fit_result]
 
-        parameters_aggregated = aggregate(ret)
-
-        #new_params = ndarrays_to_parameters(new_params) 
-
-        #self.save_params(new_params)
-
-        txdata = {'function': 'storeParameters', 'inputs': [parameters_aggregated]}
+        txdata = {'function': 'storeParameters', 'inputs': [fit_result]}
         if self.hashing:
             #b = new_params.view(numpy.uint8)
             new_params = hashlib.sha1(str(new_params).encode('utf-8')).hexdigest()
-            txdata = {'function': 'storeParameters', 'inputs': [new_params]}
+            txdata = {'function': 'storeParameters', 'inputs': [fit_result]}
 
         # TODO: update timestamp
         nonce = 1
-        print("Sending transaction")
+        #print("Sending transaction")
         tx = Transaction(sender = self.enode, receiver = 2, value = 0, data = txdata, nonce = nonce, timestamp = 1000)
         self.send_transaction(tx)
 
-        #print(new_params)
-        return new_params
-
+        return fit_result
     def flower_fit(self, timestamp):
         txdata = {'function': 'storeParameters', 'inputs': [1]}
         nonce = 1
@@ -420,7 +404,7 @@ class Node:
         
     def save_params(self, params):
         with open('params.npy', 'wb') as f:
-            np.save(f, np.array([1, 2]))
+            np.save(f, np.array(params))
 
     def read_params(self):
         """

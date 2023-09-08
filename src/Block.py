@@ -5,6 +5,8 @@ from toychain.src.utils import compute_hash, transaction_to_dict
 from os import environ
 import numpy as np
 
+from flwr.server.strategy.aggregate import aggregate, aggregate_median, weighted_loss_avg
+
 import logging
 logger = logging.getLogger('sc')
 
@@ -70,21 +72,24 @@ class Block:
         Translate the block object in a string object
         """
         #return f"## Height: {self.height}, Difficulty: {self.difficulty}, Total difficulty: {self.total_difficulty}, P: {self.miner_id}, BH: {self.hash[0:5]}, TS:{self.timestamp}, #T:{len(self.data)}, SH:{self.state.state_hash[0:5]}##"
-        return f"## Height: {self.height}, Difficulty: {self.difficulty}, Total difficulty: {self.total_difficulty}, Block Hash: {self.hash[0:5]}, Timestamp: {self.timestamp / 10.0} seconds, Number of tx's: {len(self.data)}, ##"
+        return f"Height: {self.height}, Difficulty: {self.difficulty}, Total difficulty: {self.total_difficulty}"
 
 class StateMixin:
     @property
     def getBalances(self):
         return self.balances
-    
-    @property
+
     def getN(self):
         return self.n
-        
+    
     @property
     def call(self):
         return None
     
+    @property
+    def interesting_state_variables(self):
+        return {k: v for k, v in vars(self).items() if not (k.startswith('_') or k == 'msg' or k == 'block' or k == 'private' or k == 'balances')}
+
     @property
     def state_variables(self):
         return {k: v for k, v in vars(self).items() if not (k.startswith('_') or k == 'msg' or k == 'block' or k == 'private')}
@@ -120,7 +125,6 @@ class StateMixin:
             function = getattr(self, tx.data.get("function"))
             inputs   = tx.data.get("inputs")
             try:
-                print("Applying function")
                 function(*inputs)
             except Exception as e:
                 print("Something went wrong")
@@ -135,170 +139,22 @@ class State(StateMixin):
 
         else:
             self.params_list = []
-            self.private     = {}
-            self.n           = 0
-            self.balances    = {}
-
-            self.patches     = []
-            self.robots      = {}
-            self.epochs      = {}
-            self.allepochs   = {}
+            self.aggregated_params = []
+            self.n = 0
+            self.balances = {}
 
     
     def storeParameters(self, params):
-        print("I am storing parameters")
         
         self.params_list.append(params) 
 
-        #self.params_list.append(params)
+    
+    def aggregateParameters(self):
+        self.aggregated_params = aggregate(self.params_list)
 
-    def getParamsList(self, params):
+    def getParameterList(self):
         return self.params_list
 
+    def getAggregatedParameters(self):
 
-    def robot(self, task = -1):
-        return {'task': task}
-
-    
-    def patch(self, x, y, qtty, util, qlty, json):
-        return {
-            'x': x,
-            'y': y,
-            'qtty': qtty,
-            'util': util,
-            'qlty': qlty,
-            'json': json,
-            'id': len(self.patches),
-            'maxw': int(environ['MAXWORKERS']),
-            'totw': 0,
-            'last_assign': -1,
-            'epoch': self.epoch(0,0,[],[],[],self.linearDemand(0))
-        }
-    
-    def epoch(self, number, start, Q, TC, ATC, price):
-        return {
-            'number': number,
-            'start': start,
-            'Q': Q,
-            'TC': TC,
-            'ATC': ATC,
-            'price': price
-        }
-
-    def register(self):
-        self.robots[self.msg.sender] = self.robot()
-
-    def findByPos(self, _x, _y):
-        for i in range(len(self.patches)):
-            if _x == self.patches[i]['x'] and _y == self.patches[i]['y']:
-                return i, self.patches[i]
-        return 9999, None
-
-    def updatePatch(self, x, y, qtty, util, qlty, json):
-        # x, y, qtty, util, qlty, json, id, maxw, totw, last_assign, epoch
-
-        i, _ = self.findByPos(x, y)
-
-        if i < 9999:
-            self.patches[i]["qtty"] = qtty
-            self.patches[i]["util"] = util
-            self.patches[i]["qlty"] = qlty
-            self.patches[i]["json"] = json
-
-        else:
-            new_patch = self.patch(x, y, qtty, util, qlty, json)
-            self.patches.append(new_patch)
-
-    def dropResource(self, x, y, qtty, util, qlty, json, Q, TC):
-        
-        i, _ = self.findByPos(x, y)
-
-        if i < 9999:
-
-            # Update patch information
-            self.updatePatch(x, y, qtty, util, qlty, json)
-
-            # Pay the robot
-            self.balances[self.msg.sender] += Q*util*self.patches[i]['epoch']['price']
-
-            # Fuel purchase
-            self.balances[self.msg.sender] -= TC
-            
-            self.patches[i]['epoch']['Q'].append(Q)
-            self.patches[i]['epoch']['TC'].append(TC)
-            self.patches[i]['epoch']['ATC'].append(TC/Q)
-
-            logger.info(f"Drop #{len(self.patches[i]['epoch']['Q'])}/{self.patches[i]['totw']} @ Epoch #{self.patches[i]['epoch']['number']}")
-            if len(self.patches[i]['epoch']['Q']) >= self.patches[i]['totw']:
-                TQ = sum(self.patches[i]['epoch']['Q'])
-
-                # Init new epoch
-                logger.info(f"New epoch #{self.patches[i]['epoch']['number']+1} started")
-                self.allepochs.setdefault(i, []).append(copy(self.patches[i]['epoch']))
-                self.epochs[i] = copy(self.patches[i]['epoch'])
-                self.patches[i]['epoch']['number'] += 1
-                self.patches[i]['epoch']['start']  = self.block.height
-                self.patches[i]['epoch']['Q']      = []
-                self.patches[i]['epoch']['TC']     = []
-                self.patches[i]['epoch']['ATC']    = []
-                self.patches[i]['epoch']['price']  = self.linearDemand(TQ)
-        else:
-            print(f'Patch {x},{y} not found')
-
-    def assignPatch(self):
-        for i, patch in enumerate(self.patches):
-            if patch['totw'] < patch['maxw'] and patch['epoch']['number']>patch['last_assign']:
-                self.robots[self.msg.sender]['task'] = patch['id']
-                self.patches[i]["totw"] += 1
-                self.patches[i]["last_assign"] = patch['epoch']['number']
-
-    def joinPatch(self, x, y):
-
-        i, patch = self.findByPos(x, y)
-
-        print(f"joining {patch['epoch']['number']} {patch['last_assign']}")
-        if patch and patch['totw'] < patch['maxw'] and patch['epoch']['number']>patch['last_assign']:
-            self.robots[self.msg.sender]['task'] = self.patches[i]['id']
-            self.patches[i]["totw"] += 1
-            self.patches[i]["last_assign"] = patch['epoch']['number']
-
-    def leavePatch(self):
-        i = self.robots[self.msg.sender]['task']
-        self.patches[i]["totw"] -= 1
-        self.robots[self.msg.sender]['task'] = -1
-            
-    def getPatches(self):
-       return self.patches
-
-    def getMyPatch(self, id):
-        if id not in self.robots:
-            return None
-        
-        if self.robots[id]['task'] == -1:
-            return None
-        
-        return self.patches[self.robots[id]['task']]
-        
-    def getAvailiable(self):
-        for i, patch in enumerate(self.patches):
-            if patch['totw'] < patch['maxw'] and patch['epoch']['number']>patch['last_assign']:
-                return True
-        return False
-
-    def getEpochs(self):
-        # epochs = [patch['epoch'] for patch in self.patches]
-        return self.epochs
-
-    def getAllEpochs(self):
-        # epochs = [patch['epoch'] for patch in self.patches]
-        return self.allepochs
-
-
-    def linearDemand(self, Q):
-        P = 0
-        demandA = 0 
-        demandB = 1
-        
-        if demandB > demandA * Q:
-            P = demandB - demandA * Q
-        return P
+        return self.aggregated_params

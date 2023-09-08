@@ -7,6 +7,8 @@ from toychain.src import constants
 from toychain.src.Block import Block, State
 from toychain.src.utils import gen_enode
 
+import pprint
+
 import logging
 logger = logging.getLogger('poa')
 
@@ -157,7 +159,7 @@ class ProofOfAuth():
             previous_state = previous_block.state
             mempool = list((self.node.mempool.copy().values()))
 
-            print(mempool)
+            #print(mempool)
 
             # Filter out transactions already on the blockchain
             data = [tx for tx in mempool if tx.id not in self.node.previous_transactions_id]
@@ -187,8 +189,12 @@ class ProofOfAuth():
             self.node.mempool.clear()
 
             logger.info(f"Block produced by Node {self.node.id}: ")
-            logger.info(f"{repr(block)}")
-            logger.info(f"{block.state.state_variables} \n")
+            #logger.info(f"{repr(block)}")
+            pprint.pprint(block.state.interesting_state_variables)
+            print("")
+            #for k in :
+            #    print(k)
+            #logger.info(f"{block.state.state_variables} \n")
 
     def step(self):
         if self.flag:
@@ -256,9 +262,9 @@ class ProofOfAuthThread(threading.Thread):
 
                 self.node.chain.append(block)
                 self.node.mempool.clear()
-                logger.info(f"Block produced by Node {self.node.id}: ")
-                logger.info(f"{repr(block)}")
-                logger.info(f"###{block.state.state_variables}### \n")
+                #logger.info(f"Block produced by Node {self.node.id}: ")
+                #logger.info(f"{repr(block)}")
+                #logger.info(f"###{block.state.state_variables}### \n")
 
             self.timer.sleep(self.period - delay)
 

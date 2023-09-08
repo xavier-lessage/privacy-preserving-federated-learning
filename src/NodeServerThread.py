@@ -31,7 +31,7 @@ class NodeServerThread(threading.Thread):
 
         self.terminate_flag = threading.Event()
 
-        print("Node " + str(self.id) + " starting on port " + str(self.port))
+        print("Device " + str(self.id) + " starting on TCP port " + str(self.port))
 
     def run(self):
         """

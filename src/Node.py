@@ -56,6 +56,7 @@ def train(net, trainloader, epochs):
     """Train the model on the training set."""
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+
     for _ in range(epochs):
         for data, labels in trainloader:
             optimizer.zero_grad()
@@ -77,6 +78,7 @@ def test(net, testloader):
     return loss, accuracy
 
 def load_data():
+    
     custom_data = torch.randn(32, 5)
     classification_labels = torch.randint(0, 2, (32,))
     dataset = TensorDataset(custom_data, classification_labels)
@@ -84,29 +86,30 @@ def load_data():
 
     return dataloader, dataloader
 
-net = Net().to(DEVICE)
-trainloader, testloader = load_data()
-
-
 class FlowerClient(fl.client.NumPyClient):
+
+    def __init__(self, trainloader, testloader):
+        self.trainloader = trainloader
+        self.testloader = testloader
+        self.net = Net().to(DEVICE)
+
     def get_parameters(self, config):
-        return [val.cpu().numpy() for _, val in net.state_dict().items()]
+        return [val.cpu().numpy() for _, val in self.net.state_dict().items()]
 
     def set_parameters(self, parameters):
-        params_dict = zip(net.state_dict().keys(), parameters)
+        params_dict = zip(self.net.state_dict().keys(), parameters)
         state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
-        net.load_state_dict(state_dict, strict=True)
+        self.net.load_state_dict(state_dict, strict=True)
 
     def fit(self, parameters, config):
         self.set_parameters(parameters)
-        train(net, trainloader, epochs=1)
-        return self.get_parameters(config={}), len(trainloader.dataset), {}
+        train(self.net, self.trainloader, epochs=1)
+        return self.get_parameters(config={}), len(self.trainloader.dataset), {}
 
     def evaluate(self, parameters, config):
         self.set_parameters(parameters)
-        loss, accuracy = test(net, testloader)
-        return float(loss), len(testloader.dataset), {'accuracy': accuracy}
-
+        loss, accuracy = test(self.net, self.testloader)
+        return float(loss), len(self.testloader.dataset), {'accuracy': accuracy}
 
 class Node:
     """
@@ -147,14 +150,12 @@ class Node:
         self.mining = False
         self.mining_thread = consensus.block_generation(self)
 
+        self.trainloader, self.testloader = load_data()
         # Flower (federated learning)
-        self.flower_client = FlowerClient()
+        self.flower_client = FlowerClient(self.trainloader, self.testloader)
 
         self.h = hashlib.new('sha256')
         self.hashing = False
-
-
-    
 
     @property
     def sc(self):

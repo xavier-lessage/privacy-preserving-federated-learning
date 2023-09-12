@@ -172,6 +172,18 @@ def load(arff_file,decode_str=True):
             df[df_str.columns] = df_str.applymap(lambda x:x.decode('utf-8'))
     return df
 
+def test(RecurrentAutoencoder, testloader):
+  """Validate the model on the test set."""
+  criterion = torch.nn.CrossEntropyLoss()
+  correct, total, loss = 0, 0, 0.0
+  with torch.no_grad():
+    for images, labels in testloader:
+      outputs = RecurrentAutoencoder(images.to(DEVICE))
+      loss += criterion(outputs, labels.to(DEVICE)).item()
+      total += labels.size(0)
+      correct += (torch.max(outputs.data, 1)[1] == labels).sum().item()
+  return loss / len(testloader), correct / total
+
 def preprocess():
     print("Preprocessing .....")
     with open('ECG5000/ECG5000_TRAIN.arff') as f:
@@ -229,10 +241,10 @@ class FlowerClient(fl.client.NumPyClient):
     train_model(RecurrentAutoencoder, trainloader,valloader, n_epochs=1)
     return self.get_parameters(config={}), len(trainloader), {}
 
-#   def evaluate(self, parameters, config):
-#     self.set_parameters(parameters)
-#     #loss, accuracy = test(RecurrentAutoencoder, valloader)
-#     return float(loss), len(valloader.dataset), {"accuracy": float(accuracy)}
+  def evaluate(self, parameters, config):
+    self.set_parameters(parameters)
+    loss, accuracy = test(RecurrentAutoencoder, valloader)
+    return float(loss), len(valloader), {"accuracy": float(accuracy)}
 
 # Start Flower client
 fl.client.start_numpy_client(server_address="195.83.169.139:8080", client=FlowerClient())

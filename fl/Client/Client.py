@@ -1,4 +1,5 @@
 from collections import OrderedDict
+import copy
 import warnings
 import flwr as fl
 import torch
@@ -225,8 +226,8 @@ class FlowerClient(fl.client.NumPyClient):
 
   def fit(self, parameters, config):
     self.set_parameters(parameters)
-    train_model(RecurrentAutoencoder, trainloader,valloader, epochs=1)
-    return self.get_parameters(config={}), len(trainloader.dataset), {}
+    train_model(RecurrentAutoencoder, trainloader,valloader, n_epochs=1)
+    return self.get_parameters(config={}), len(trainloader), {}
 
 #   def evaluate(self, parameters, config):
 #     self.set_parameters(parameters)

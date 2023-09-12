@@ -1,7 +1,7 @@
 pip install -r requirements_client.txt
 
 pip install gdown
-if [ ! -f ECG5000 ]; then
+if [ ! -d ECG5000 ]; then
     gdown --id 16MIleqoIr1vYxlGk4GKnGmrsCPuWkkpT
     sudo apt install unzip
     mkdir ECG5000

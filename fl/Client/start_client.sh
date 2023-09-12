@@ -1,4 +1,4 @@
-pip install -r requirements.txt
+pip install -r requirements_client.txt
 
 pip install gdown
 if [ ! -f ECG5000 ]; then
